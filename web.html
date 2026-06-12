@@ -6,29 +6,35 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Arise Website</title>
     <link rel="stylesheet" href="web.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
 </head>
 
 <body>
     <!-- NAVBAR -->
     <header>
-        <nav>
-            <!-- <div class="logo">
-                ARISE ICT HUB
-            </div> -->
+    <nav>
+        <!-- Navbar Particles -->
+        <canvas id="navParticles"></canvas>
 
+        <a href="#top" class="logo">
             <img src="ARISE.png" alt="">
+        </a>
 
-            <ul>
-                <li class="ul"><a href="#home">Home</a></li>
-                <li class="ul"><a href="#about">About</a></li>
-                <li class="ul"><a href="#programs">Programs</a></li>
-                <li class="ul"><a href="#">Projects</a></li>
-                <li class="ul"><a href="#">Contact</a></li>
-                <button>Apply Now</button>
-            </ul>
+        <ul>
+            <li class="ul"><a href="#about">About</a></li>
+            <li class="ul"><a href="#programs">Programs</a></li>
+            <li class="ul"><a href="#">Projects</a></li>
+            <li class="ul"><a href="#">Contact</a></li>
+            <button>Apply Now</button>
+        </ul>
+    </nav>
+</header>
 
-        </nav>
-    </header>
+    <canvas id="particles"></canvas>
+
+    <div class="content">
+        <h4></h4>
+    </div>
 
 
     <!-- HERO -->
@@ -48,16 +54,7 @@
             </button>
         </div>
 
-        <div>
-
         </div>
-
-        <!-- <div class="right">
-
-            <img src="images/hero.png">
-
-        </div> -->
-
     </section>
 
     <!-- STATS -->
@@ -116,8 +113,9 @@
     </section>
 
     <!-- PROGRAMS -->
-    <section id="programs" class="programs">
+    <section class="programs">
         <h2>Our Programs</h2>
+
         <div class="grids">
             <div class="card">
                 <h3>Web Development</h3>
@@ -130,23 +128,44 @@
             </div>
 
             <div class="card">
-                <h3>Digital Skills</h3>
+                <h3>Data Analysis</h3>
                 <p>Practical learning</p>
             </div>
 
             <div class="card">
-                <h3>Product Design</h3>
-                <p>Design products</p>
+                <h3>AI</h3>
+                <p>Artificial Intelligence</p>
             </div>
+
         </div>
-
     </section>
-
 
     <!-- FOOTER -->
 
-    <footer>
-        <p>
+    <footer class="footer">
+        <div class="footer-container">
+            <div class="footer-contact">
+                <p>
+                    <i class="fa-solid fa-envelope"></i>
+                    Email: info@ariseict.com
+                </p>
+                <p>
+                    <i class="fa-solid fa-phone"></i>
+                    Phone: +234 xxx xxx xxxx
+                </p>
+            </div>
+
+            <div class="footer-social">
+                <a href="#">
+                    <i class="fa-brands fa-facebook"></i> Facebook
+                </a>
+                <a href="#">
+                    <i class="fa-brands fa-instagram"></i> Instagram
+                </a>
+            </div>
+        </div>
+
+        <p class="copyright">
             © 2025 ARISE ICT HUB
         </p>
     </footer>
