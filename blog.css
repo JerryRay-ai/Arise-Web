@@ -1,0 +1,15 @@
+.back-home{
+    display:inline-block;
+    margin:20px;
+    padding:10px 20px;
+    background:#ff7b00;
+    color:white;
+    text-decoration:none;
+    border-radius:8px;
+    font-weight:bold;
+    transition:0.3s;
+}
+
+.back-home:hover{
+    transform:translateY(-2px);
+}
