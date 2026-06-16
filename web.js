@@ -62,3 +62,57 @@ function animate() {
 }
 
 animate();
+
+// Contact form handling (client-side validation and submission via fetch)
+const contactForm = document.getElementById('contactForm');
+if (contactForm) {
+    const submitBtn = document.getElementById('submitBtn');
+    const formStatus = document.getElementById('formStatus');
+
+    contactForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        formStatus.textContent = '';
+
+        const name = document.getElementById('name').value.trim();
+        const email = document.getElementById('email').value.trim();
+        const program = document.getElementById('program').value;
+
+        if (!name || !email || !program) {
+            formStatus.textContent = 'Please complete all required fields.';
+            formStatus.style.color = '#8b1e1e';
+            return;
+        }
+
+        submitBtn.disabled = true;
+        submitBtn.textContent = 'Sending...';
+
+        try {
+            const action = contactForm.action;
+            const formData = new FormData(contactForm);
+
+            const res = await fetch(action, {
+                method: 'POST',
+                body: formData,
+                headers: {
+                    'Accept': 'application/json'
+                }
+            });
+
+            if (res.ok) {
+                formStatus.textContent = 'Thanks — we received your registration. We will be in touch soon.';
+                formStatus.style.color = '#0f5132';
+                contactForm.reset();
+            } else {
+                const data = await res.json();
+                formStatus.textContent = (data && data.error) ? data.error : 'Submission failed. Please try again later.';
+                formStatus.style.color = '#8b1e1e';
+            }
+        } catch (err) {
+            formStatus.textContent = 'Network error. Please check your connection and try again.';
+            formStatus.style.color = '#8b1e1e';
+        } finally {
+            submitBtn.disabled = false;
+            submitBtn.textContent = 'Register / Send';
+        }
+    });
+}

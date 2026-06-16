@@ -24,8 +24,8 @@
                 <li class="ul"><a href="#about">About</a></li>
                 <li class="ul"><a href="#programs">Programs</a></li>
                 <li class="ul"><a href="blog.html">Blog</a></li>
-                <li class="ul"><a href="#">Projects</a></li>
-                <li class="ul"><a href="#">Contact</a></li>
+                <li class="ul"><a href="#contact">Contact</a></li>
+                <button><a href="sponsors.html">Sponsors</a></button>
                 <button>Apply Now</button>
             </ul>
         </nav>
@@ -33,30 +33,24 @@
 
     <canvas id="particles"></canvas>
 
-    <div class="content">
-        <h4></h4>
-    </div>
-
-
     <!-- HERO -->
 
     <section id="home" class="hero">
+  <div class="left">
+    <h1>Empowering Young Minds with Digital Skills</h1>
+    <p>Build practical skills and launch your future with hands-on programs, mentorship, and career-ready projects.</p>
+    <a href="#programs" class="hero-btn">Explore Programs</a>
+    <div class="hero-highlights">
+      <span>✅ Practical training</span>
+      <span>✅ Live mentorship</span>
+      <span>✅ Real projects</span>
+    </div>
+  </div>
 
-        <div class="left">
-            <h1>
-                Empowering Young Minds
-                with Digital Skills
-            </h1>
-            <p>
-                Build practical skills and launch your future.
-            </p>
-            <button>
-                Explore Programs
-            </button>
-        </div>
-
-        </div>
-    </section>
+  <div class="right">
+    <img src="hero-image.jpg" alt="Students learning digital skills in a classroom">
+  </div>
+</section>
 
     <!-- STATS -->
     <section class="stats">
@@ -79,13 +73,8 @@
     </section>
 
     <!-- About Section -->
-    <button class="sponsors"><a href="sponsors.html">Sponsors</a></button>
-
 
     <section id="about" class="about">
-        <div class="image">
-            <img src="" alt="">
-        </div>
         <div class="grid">
             <div class="abouts">
                 <h3 class="head">ABOUT</h3>
@@ -116,31 +105,95 @@
     </section>
 
     <!-- PROGRAMS -->
-    <section class="programs">
-        <h2>Our Programs</h2>
+    <section id="programs" class="programs">
+  <h2>Our Programs</h2>
+  <p class="program-subtitle">
+    Practical training designed for students, entrepreneurs, and career changers.
+  </p>
 
-        <div class="grids">
-            <div class="card">
-                <h3>Computer Basics</h3>
-                <p>Office packages</p>
-            </div>
+  <div class="program-grid">
+    <article class="program-card">
+      <!-- <span class="program-badge">Popular</span> -->
+      <h3>Web Development</h3>
+      <p>Learn HTML, CSS, and JavaScript.</p>
+      <ul>
+        <li>Duration: 6 months</li>
+        <li>Level: Beginner</li>
+        <li>Outcome: Portfolio website</li>
+      </ul>
+      <a href="#contact" class="program-btn">Get started</a>
+    </article>
 
-            <div class="card">
-                <h3>Web Development</h3>
-                <p>Learn HTML CSS JS</p>
-            </div>
+    <article class="program-card">
+      <h3>Data Analysis</h3>
+      <p>Analyze data, build dashboards, and make smarter decisions.</p>
+      <ul>
+        <li>Duration: 3 months</li>
+        <li>Level: Intermediate</li>
+        <li>Outcome: Project-ready skills</li>
+      </ul>
+      <a href="#contact" class="program-btn">Get Started</a>
+    </article>
 
-            <div class="card">
-                <h3>Data Analysis</h3>
-                <p>Practical learning</p>
-            </div>
+    <article class="program-card">
+      <h3>AI Essentials</h3>
+      <p>Understand AI concepts and build simple intelligent applications.</p>
+      <ul>
+        <li>Duration: 3 months</li>
+        <li>Level: Beginner</li>
+        <li>Outcome: AI project showcase</li>
+      </ul>
+      <a href="#contact" class="program-btn">Get started</a>
+    </article>
 
-            <div class="card">
-                <h3>AI</h3>
-                <p>Artificial Intelligence</p>
-            </div>
+    <article class="program-card">
+      <h3>Computer Basics</h3>
+      <p>Master the essential tools and software for school or business.</p>
+      <ul>
+        <li>Duration: 2 months</li>
+        <li>Level: Beginner</li>
+        <li>Outcome: Certification</li>
+      </ul>
+      <a href="#contact" class="program-btn">Get Started</a>
+    </article>
+  </div>
+</section>
 
+    <!-- CONTACT / REGISTRATION -->
+
+    <section id="contact" class="contact-section">
+      <div class="contact-container">
+        <div class="contact-info">
+          <h2>Register / Contact Us</h2>
+          <p>Complete the short form and we'll get back to you with next steps.</p>
+          <p><strong>Email:</strong> info@ariseict.com</p>
+          <p><strong>Phone:</strong> +234 xxx xxx xxxx</p>
         </div>
+
+        <form id="contactForm" class="contact-form" method="POST" action="https://formspree.io/f/yourFormId">
+          <label for="name">Full name</label>
+          <input type="text" id="name" name="name" required>
+
+          <label for="email">Email address</label>
+          <input type="email" id="email" name="email" required>
+
+          <label for="program">Program of interest</label>
+          <select id="program" name="program" required>
+            <option value="">Choose a program</option>
+            <option>Web Development</option>
+            <option>Data Analysis</option>
+            <option>AI Essentials</option>
+            <option>Computer Basics</option>
+          </select>
+
+          <label for="message">Message (optional)</label>
+          <textarea id="message" name="message" rows="4"></textarea>
+
+          <button type="submit" id="submitBtn">Register / Send</button>
+
+          <p id="formStatus" class="form-status" aria-live="polite"></p>
+        </form>
+      </div>
     </section>
 
     <!-- FOOTER -->
