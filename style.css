@@ -1,7 +1,12 @@
+* {
+    box-sizing: border-box;
+}
+
 body {
     font-family: Arial, sans-serif;
     margin: 0;
     background: #f4f6f8;
+    color: #111827;
 }
 
 /* Header */
@@ -94,4 +99,36 @@ body {
     background: green;
     color: white;
     transform: translateX(-5px);
+}
+
+@media (max-width: 600px) {
+    .page-header {
+        padding: 36px 18px;
+    }
+
+    .page-header h1 {
+        font-size: 32px;
+        line-height: 1.1;
+    }
+
+    .sponsor-grid {
+        grid-template-columns: 1fr;
+        padding: 24px 18px;
+    }
+
+    .sponsor-card {
+        padding: 18px;
+    }
+
+    .sponsor-info h2 {
+        font-size: 22px;
+        line-height: 1.2;
+    }
+
+    .back-home-btn {
+        display: block;
+        width: calc(100% - 36px);
+        margin: 0 18px 28px;
+        text-align: center;
+    }
 }

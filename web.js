@@ -1,69 +1,43 @@
 console.log("Website loaded");
 
-const canvas = document.getElementById("navParticles");
-const ctx = canvas.getContext("2d");
+const navToggle = document.getElementById('navToggle');
+const nav = document.querySelector('nav');
 
-// Resize canvas to match navbar
-function resizeCanvas() {
-    canvas.width = canvas.offsetWidth;
-    canvas.height = canvas.offsetHeight;
-}
-
-resizeCanvas();
-window.addEventListener("resize", resizeCanvas);
-
-// Particle array
-const particles = [];
-
-// Increase for fewer dots, decrease for more dots
-const spacing = 20;
-
-// Create neatly arranged particles
-for (let x = spacing; x < canvas.width; x += spacing) {
-    for (let y = spacing; y < canvas.height; y += spacing) {
-        particles.push({
-            baseX: x,
-            baseY: y,
-            x: x,
-            y: y,
-            size: 1, // small dots
-            color: Math.random() > 0.5 ? "#ff7a00" : "#22c55e"
-        });
-    }
-}
-
-let time = 0;
-
-function animate() {
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-    particles.forEach((particle, index) => {
-
-        // Smooth synchronized movement
-        particle.x = particle.baseX + Math.cos(time + index * 0.08) * 3;
-        particle.y = particle.baseY + Math.sin(time + index * 0.08) * 3;
-
-        ctx.beginPath();
-        ctx.arc(
-            particle.x,
-            particle.y,
-            particle.size,
-            0,
-            Math.PI * 2
-        );
-
-        ctx.fillStyle = particle.color;
-        ctx.fill();
+if (navToggle && nav) {
+    navToggle.addEventListener('click', () => {
+        nav.classList.toggle('nav-open');
     });
 
-    time += 0.02;
-
-    requestAnimationFrame(animate);
+    nav.querySelectorAll('a[href^="#"]').forEach(link => {
+        link.addEventListener('click', () => {
+            if (nav.classList.contains('nav-open')) {
+                nav.classList.remove('nav-open');
+            }
+        });
+    });
 }
 
-animate();
+// Apply Now modal handling
+const applyNowBtn = document.getElementById('applyNowBtn');
+const applyModal = document.getElementById('applyModal');
+const modalClose = document.getElementById('modalClose');
 
-// Contact form handling (client-side validation and submission via fetch)
+if (applyNowBtn && applyModal && modalClose) {
+    applyNowBtn.addEventListener('click', () => {
+        applyModal.classList.add('open');
+    });
+
+    modalClose.addEventListener('click', () => {
+        applyModal.classList.remove('open');
+    });
+
+    applyModal.addEventListener('click', (event) => {
+        if (event.target === applyModal) {
+            applyModal.classList.remove('open');
+        }
+    });
+}
+
 const contactForm = document.getElementById('contactForm');
 if (contactForm) {
     const submitBtn = document.getElementById('submitBtn');
@@ -75,9 +49,9 @@ if (contactForm) {
 
         const name = document.getElementById('name').value.trim();
         const email = document.getElementById('email').value.trim();
-        const program = document.getElementById('program').value;
+        const message = document.getElementById('message').value.trim();
 
-        if (!name || !email || !program) {
+        if (!name || !email) {
             formStatus.textContent = 'Please complete all required fields.';
             formStatus.style.color = '#8b1e1e';
             return;
@@ -99,7 +73,7 @@ if (contactForm) {
             });
 
             if (res.ok) {
-                formStatus.textContent = 'Thanks — we received your registration. We will be in touch soon.';
+                formStatus.textContent = 'Thanks — we received your message. We will be in touch soon.';
                 formStatus.style.color = '#0f5132';
                 contactForm.reset();
             } else {
