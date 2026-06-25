@@ -649,7 +649,7 @@ nav.nav-open .nav-toggle span:nth-child(3) {
     padding: 48px 5%;
     background:
       linear-gradient(90deg, rgba(3, 30, 12, 0.88) 0%, rgba(3, 30, 12, 0.7) 58%, rgba(3, 30, 12, 0.42) 100%),
-      url("Sponsor1.jpg") center 24% / cover no-repeat;
+      url("heroimage.jpeg") center 24% / cover no-repeat;
   }
 
   .stats,
