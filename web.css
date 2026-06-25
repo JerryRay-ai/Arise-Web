@@ -152,7 +152,7 @@ nav.nav-open .nav-toggle span:nth-child(3) {
   overflow: hidden;
   background:
     linear-gradient(90deg, rgba(3, 30, 12, 0.86) 0%, rgba(3, 30, 12, 0.68) 46%, rgba(3, 30, 12, 0.25) 100%),
-    url("Sponsor1.jpg") center 28% / cover no-repeat;
+    url("heroimage.jpeg") center 28% / cover no-repeat;
 }
 
 .hero .left {
@@ -206,22 +206,24 @@ nav.nav-open .nav-toggle span:nth-child(3) {
 }
 
 .box {
-  min-height: 130px;
-  padding: 24px 16px;
+  min-height: 100px;
+  padding: 18px 12px;
   border-radius: 12px;
-  background: linear-gradient(135deg, #f36b21 0%, #f4c430 100%);
+  background: #ffffff;
   color: #111827;
   text-align: center;
+  border: 1px solid #e5e7eb;
+  box-shadow: 0 6px 18px rgba(0,0,0,0.08);
 }
 
 .box h2 {
-  font-size: clamp(2rem, 4vw, 3rem);
-  line-height: 1;
+  color: #0b7a2a;
+  font-size: 2rem;
 }
 
 .box p {
-  margin-top: 10px;
-  font-weight: 700;
+  margin-top: 6px;
+  color: #526174;
 }
 
 .about,
