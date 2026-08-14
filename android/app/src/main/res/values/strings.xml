@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">ARISE Admin</string>
+    <string name="title_activity_main">ARISE Admin</string>
+    <string name="package_name">com.arise.ict.admin</string>
+    <string name="custom_url_scheme">com.arise.ict.admin</string>
+</resources>

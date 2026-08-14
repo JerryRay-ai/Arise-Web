@@ -1,0 +1,662 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>ARISE ICT HUB — Product Requirements Document</title>
+<style>
+  @page { size: A4; margin: 18mm 16mm 16mm 16mm; }
+
+  :root{
+    --green:#1f7a35;
+    --green-dark:#103f18;
+    --ink:#12211a;
+    --body:#33403a;
+    --muted:#6a7a72;
+    --line:#dfe6e1;
+    --soft:#f4f8f5;
+    --amber:#8a6410;
+    --amber-bg:#fdf6e6;
+  }
+
+  *{ box-sizing:border-box; }
+  html,body{ margin:0; padding:0; }
+  body{
+    font-family:"Segoe UI", "Helvetica Neue", Arial, sans-serif;
+    color:var(--body);
+    font-size:10.2pt;
+    line-height:1.55;
+  }
+
+  h1,h2,h3,h4{ color:var(--ink); font-weight:700; margin:0; }
+  p{ margin:0 0 8px; }
+  ul,ol{ margin:0 0 8px; padding-left:18px; }
+  li{ margin-bottom:4px; }
+  code{
+    font-family:"Consolas","Courier New",monospace;
+    font-size:9pt;
+    background:var(--soft);
+    border:1px solid var(--line);
+    border-radius:3px;
+    padding:0.5px 4px;
+    color:var(--green-dark);
+  }
+  strong{ color:var(--ink); }
+
+  /* ---------- Cover ---------- */
+  .cover{
+    height:245mm;
+    display:flex;
+    flex-direction:column;
+    justify-content:center;
+    page-break-after:always;
+  }
+  .cover__rule{ height:5px; width:70px; background:var(--green); border-radius:3px; margin-bottom:22px; }
+  .cover__eyebrow{
+    font-size:9pt; font-weight:700; letter-spacing:.2em;
+    text-transform:uppercase; color:var(--green); margin-bottom:10px;
+  }
+  .cover__title{ font-size:31pt; line-height:1.12; letter-spacing:-.5px; margin-bottom:6px; }
+  .cover__subtitle{ font-size:14pt; color:var(--muted); font-weight:600; margin-bottom:26px; }
+  .cover__lede{ font-size:11pt; max-width:135mm; color:var(--body); margin-bottom:30px; }
+  .cover__meta{
+    border-top:1px solid var(--line);
+    padding-top:14px;
+    display:grid;
+    grid-template-columns:repeat(3, 1fr);
+    gap:12px 18px;
+    max-width:150mm;
+  }
+  .cover__meta div span{
+    display:block; font-size:7.6pt; letter-spacing:.13em;
+    text-transform:uppercase; color:var(--muted); font-weight:700; margin-bottom:2px;
+  }
+  .cover__meta div b{ font-size:10pt; color:var(--ink); font-weight:600; }
+
+  /* ---------- Structure ---------- */
+  h2.sec{
+    font-size:15pt;
+    margin:0 0 12px;
+    padding-bottom:7px;
+    border-bottom:2px solid var(--green);
+    page-break-after:avoid;
+  }
+  h2.sec .n{ color:var(--green); margin-right:9px; }
+  h3{ font-size:11.4pt; margin:16px 0 6px; page-break-after:avoid; }
+  h4{ font-size:10.2pt; margin:12px 0 4px; color:var(--green-dark); page-break-after:avoid; }
+  section{ page-break-before:always; }
+  section.cont{ page-break-before:auto; }
+
+  /* ---------- Tables ---------- */
+  table{ width:100%; border-collapse:collapse; margin:8px 0 12px; font-size:9.2pt; }
+  th{
+    background:var(--green-dark); color:#fff; text-align:left;
+    font-weight:700; padding:6px 8px; font-size:8.6pt;
+    letter-spacing:.04em; text-transform:uppercase;
+  }
+  td{ border:1px solid var(--line); padding:6px 8px; vertical-align:top; }
+  tr:nth-child(even) td{ background:#fafcfa; }
+  td.id{ font-weight:700; color:var(--green-dark); white-space:nowrap; width:52px; }
+  td.pri{ white-space:nowrap; width:56px; }
+  table, tr, td, th { page-break-inside:avoid; }
+
+  /* ---------- Callouts ---------- */
+  .box{
+    background:var(--soft);
+    border-left:3px solid var(--green);
+    padding:10px 13px;
+    margin:10px 0 13px;
+    page-break-inside:avoid;
+  }
+  .box--warn{ background:var(--amber-bg); border-left-color:#c8951f; }
+  .box p:last-child{ margin-bottom:0; }
+  .box__t{
+    font-size:8.4pt; font-weight:700; letter-spacing:.12em;
+    text-transform:uppercase; color:var(--green-dark); margin-bottom:4px;
+  }
+  .box--warn .box__t{ color:var(--amber); }
+
+  .pill{
+    display:inline-block; font-size:7.8pt; font-weight:700;
+    padding:1.5px 7px; border-radius:9px; letter-spacing:.03em;
+  }
+  .pill--done{ background:#e4f2e7; color:var(--green-dark); }
+  .pill--todo{ background:#fdf0e2; color:#8a5410; }
+
+  .flow{
+    border:1px solid var(--line); border-radius:5px;
+    padding:11px 14px; margin:8px 0 13px; background:#fff;
+    page-break-inside:avoid;
+  }
+  .flow ol{ margin:0; padding-left:17px; }
+  .flow ol li{ margin-bottom:5px; }
+
+  .foot{
+    margin-top:26px; padding-top:10px; border-top:1px solid var(--line);
+    font-size:8.6pt; color:var(--muted); text-align:center;
+  }
+</style>
+</head>
+<body>
+
+<!-- ============ COVER ============ -->
+<div class="cover">
+  <div class="cover__rule"></div>
+  <div class="cover__eyebrow">Product Requirements Document</div>
+  <h1 class="cover__title">ARISE ICT HUB</h1>
+  <div class="cover__subtitle">Candidate Registration &amp; Certificate Verification Portal</div>
+  <p class="cover__lede">
+    A public web portal for ARISE ICT HUB, Uyo. Prospective students enrol online and receive an
+    auto-generated registration number; graduates verify their record and download an official
+    PDF certificate using two factors. An allowlisted admin console manages candidates and issues
+    certificates — with no privileged key ever reaching the browser.
+  </p>
+  <div class="cover__meta">
+    <div><span>Product</span><b>arise-ict-hub</b></div>
+    <div><span>Version</span><b>0.1.0</b></div>
+    <div><span>Status</span><b>Built — pre-launch</b></div>
+    <div><span>Document date</span><b>12 August 2026</b></div>
+    <div><span>Owner</span><b>ARISE ICT HUB</b></div>
+    <div><span>Platform</span><b>Web (responsive)</b></div>
+  </div>
+</div>
+
+<!-- ============ 1. OVERVIEW ============ -->
+<section class="cont">
+  <h2 class="sec"><span class="n">1.</span>Overview</h2>
+
+  <h3>1.1 Problem</h3>
+  <p>
+    ARISE ICT HUB enrols students onto ICT programmes and awards a certificate on completion.
+    Both processes have been manual: registration on paper, and certificates handed out physically
+    with no way for a student — or a prospective employer — to confirm afterwards that a record
+    is genuine. Paper records are slow to search, easy to lose, and impossible to verify remotely.
+  </p>
+
+  <h3>1.2 Solution</h3>
+  <p>
+    A single responsive web portal that does four things:
+  </p>
+  <ul>
+    <li>markets the hub and its programmes (landing and about pages);</li>
+    <li>takes student registrations online and issues a registration number automatically;</li>
+    <li>lets a student verify their record and download their certificate using their
+        registration number plus the phone number they registered with;</li>
+    <li>gives staff an admin console to review candidates, add historic (paper-registered)
+        students, and issue or revoke certificates.</li>
+  </ul>
+
+  <h3>1.3 Goals</h3>
+  <ul>
+    <li><strong>Digitise enrolment</strong> — replace the paper form with a validated online one.</li>
+    <li><strong>Make certificates verifiable</strong> — any holder can prove their record from any device.</li>
+    <li><strong>Protect candidate data</strong> — personal records must never be publicly enumerable.</li>
+    <li><strong>Keep admin work small</strong> — one upload per student issues a certificate.</li>
+    <li><strong>Preserve history</strong> — previously registered students can be brought into the system.</li>
+  </ul>
+
+  <h3>1.4 Non-goals (this release)</h3>
+  <ul>
+    <li>Payments, invoicing, or fee collection.</li>
+    <li>Course delivery, lessons, assignments, or grading (no LMS).</li>
+    <li>Student self-service login and accounts — verification is credential-based, not session-based.</li>
+    <li>Automated certificate generation or templating — the PDF is produced outside the system and uploaded.</li>
+    <li>Bulk/CSV import of historic students (added one at a time via the admin form).</li>
+    <li>Email or SMS notifications.</li>
+  </ul>
+
+  <h3>1.5 Users</h3>
+  <table>
+    <tr><th style="width:26%">User</th><th>Needs from the product</th></tr>
+    <tr>
+      <td><strong>Prospective student</strong></td>
+      <td>Understand the programmes, then register from a phone in a few minutes and receive a registration number to keep.</td>
+    </tr>
+    <tr>
+      <td><strong>Enrolled student / graduate</strong></td>
+      <td>Check whether their certificate has been issued and download the official PDF without creating an account.</td>
+    </tr>
+    <tr>
+      <td><strong>Administrator</strong> (allowlisted staff)</td>
+      <td>See who has registered, add students who enrolled on paper, upload each certificate, and revoke one issued in error.</td>
+    </tr>
+    <tr>
+      <td><strong>Third party</strong> (employer, institution)</td>
+      <td>Confirm a certificate is genuine — possible only with the holder's own two credentials, by design.</td>
+    </tr>
+  </table>
+</section>
+
+<!-- ============ 2. SCOPE ============ -->
+<section>
+  <h2 class="sec"><span class="n">2.</span>Scope &amp; Site Map</h2>
+
+  <p>The product is a single-page React application with five routes. Public pages share a marketing
+     header and footer; the admin console renders outside that chrome with its own shell.</p>
+
+  <table>
+    <tr><th style="width:20%">Route</th><th style="width:16%">Access</th><th>Purpose</th></tr>
+    <tr><td><code>/</code></td><td>Public</td>
+        <td>Landing page — hero, statistics, programmes, why-choose-us, how it works, testimonials, sponsors.</td></tr>
+    <tr><td><code>/about</code></td><td>Public</td>
+        <td>Mission, story, core values, offerings, strategic goals, call to action.</td></tr>
+    <tr><td><code>/register</code></td><td>Public</td>
+        <td>New student registration form with passport photo upload.</td></tr>
+    <tr><td><code>/verify</code></td><td>Public</td>
+        <td>Certificate inquiry — two-factor lookup, student profile, certificate download.</td></tr>
+    <tr><td><code>/admin</code></td><td>Admin only</td>
+        <td>Console: dashboard, students, certificates, settings.</td></tr>
+  </table>
+
+  <div class="box">
+    <div class="box__t">Routing note</div>
+    <p>Unknown paths fall back to the landing page. The host is configured to rewrite all paths to
+       <code>index.html</code> so deep links such as <code>/verify</code> resolve on a hard refresh.</p>
+  </div>
+
+  <h3>2.1 In scope</h3>
+  <ul>
+    <li>Public marketing pages with the hub's real programme and sponsor content.</li>
+    <li>Online registration with server-side validation and server-assigned registration numbers.</li>
+    <li>Passport photo upload (JPEG/PNG, maximum 5&nbsp;MB).</li>
+    <li>Two-factor verification: registration number + registered phone number.</li>
+    <li>Certificate download via a short-lived signed URL (five minutes).</li>
+    <li>Admin console with dashboard statistics, searchable/filterable student list, profile view,
+        certificate issue and revoke, and manual student creation.</li>
+    <li>Full mobile responsiveness including a bottom tab bar and bottom-sheet modals on the console.</li>
+  </ul>
+
+  <h3>2.2 Out of scope</h3>
+  <ul>
+    <li>Everything listed under non-goals (§1.4).</li>
+    <li>Multi-role admin permissions — every allowlisted admin has identical rights.</li>
+    <li>Audit logging of admin actions beyond the derived activity feed on the dashboard.</li>
+    <li>Editing a candidate's details after creation.</li>
+  </ul>
+</section>
+
+<!-- ============ 3. FUNCTIONAL REQUIREMENTS ============ -->
+<section>
+  <h2 class="sec"><span class="n">3.</span>Functional Requirements</h2>
+
+  <h3>3.1 Public site</h3>
+  <table>
+    <tr><th class="id">ID</th><th>Requirement</th><th class="pri">Priority</th></tr>
+    <tr><td class="id">PS-1</td><td>The landing page presents the hub's hero message, headline statistics, programme cards, differentiators, a three-step process, testimonials and sponsors.</td><td class="pri">Must</td></tr>
+    <tr><td class="id">PS-2</td><td>The header links to Home, About, Programs and Certificate; the Programs link scrolls to the programmes section on the landing page.</td><td class="pri">Must</td></tr>
+    <tr><td class="id">PS-3</td><td>On route change the page scrolls to the top, or smoothly to the anchored section when the URL carries a hash.</td><td class="pri">Must</td></tr>
+    <tr><td class="id">PS-4</td><td>The about page shows mission, core values, offerings and strategic goals.</td><td class="pri">Should</td></tr>
+    <tr><td class="id">PS-5</td><td>Every page is fully usable on a phone at 360&nbsp;px width.</td><td class="pri">Must</td></tr>
+  </table>
+
+  <h3>3.2 Student registration</h3>
+  <table>
+    <tr><th class="id">ID</th><th>Requirement</th><th class="pri">Priority</th></tr>
+    <tr><td class="id">RG-1</td><td>The form collects: full name, phone, email (optional), date of birth, gender, marital status, state of origin, LGA, address, occupation, religion, last institution, next of kin name and phone, course, class schedule, and a passport photo.</td><td class="pri">Must</td></tr>
+    <tr><td class="id">RG-2</td><td>Full name, phone, occupation, religion and passport photo are required. All other fields are optional.</td><td class="pri">Must</td></tr>
+    <tr><td class="id">RG-3</td><td>Course is chosen from a fixed list: Web Development, UI/UX Design, Graphic Design, Data Analytics, Basic Computer Education.</td><td class="pri">Must</td></tr>
+    <tr><td class="id">RG-4</td><td>Class schedule is chosen from: 9am–11am, 11am–1pm, 2pm–4pm.</td><td class="pri">Must</td></tr>
+    <tr><td class="id">RG-5</td><td>The passport photo must be JPEG or PNG and no larger than 5&nbsp;MB; the applicant sees a thumbnail preview and can change or remove it before submitting.</td><td class="pri">Must</td></tr>
+    <tr><td class="id">RG-6</td><td>The registration number is generated by the server. The client never supplies or influences it.</td><td class="pri">Must</td></tr>
+    <tr><td class="id">RG-7</td><td>Registration numbers follow <code>ARISE/ICT/{year}/{0000}</code>, sequential and dense within each year.</td><td class="pri">Must</td></tr>
+    <tr><td class="id">RG-8</td><td>The registration year is derived server-side from the current date, never sent by the client.</td><td class="pri">Must</td></tr>
+    <tr><td class="id">RG-9</td><td>Every rule is enforced again on the server; client-side validation is a convenience only.</td><td class="pri">Must</td></tr>
+    <tr><td class="id">RG-10</td><td>When an email is supplied it must be unique; a duplicate is rejected with a clear message.</td><td class="pri">Must</td></tr>
+    <tr><td class="id">RG-11</td><td>On success the applicant sees a confirmation showing their registration number, with guidance to keep it safe alongside their phone number for verification.</td><td class="pri">Must</td></tr>
+    <tr><td class="id">RG-12</td><td>Server error codes are translated into plain-English messages; raw database errors are never shown.</td><td class="pri">Must</td></tr>
+  </table>
+
+  <h3>3.3 Verification &amp; certificate download</h3>
+  <table>
+    <tr><th class="id">ID</th><th>Requirement</th><th class="pri">Priority</th></tr>
+    <tr><td class="id">VF-1</td><td>Verification requires <strong>both</strong> the registration number and the phone number used at registration. Neither alone returns anything.</td><td class="pri">Must</td></tr>
+    <tr><td class="id">VF-2</td><td>Phone numbers are compared on digits only, so spacing, dashes and <code>+234</code> versus leading <code>0</code> do not block a legitimate match.</td><td class="pri">Must</td></tr>
+    <tr><td class="id">VF-3</td><td>A successful lookup shows: passport photo, full name, age, marital status, state of origin, course, and course status (Graduated or In Progress).</td><td class="pri">Must</td></tr>
+    <tr><td class="id">VF-4</td><td>Age is computed server-side from the date of birth; the date of birth itself is never returned.</td><td class="pri">Must</td></tr>
+    <tr><td class="id">VF-5</td><td>The verification response excludes the internal record id, certificate path, email and address.</td><td class="pri">Must</td></tr>
+    <tr><td class="id">VF-6</td><td>The download button appears only when the certificate has been issued; otherwise a pending message explains the record is not ready.</td><td class="pri">Must</td></tr>
+    <tr><td class="id">VF-7</td><td>Download identity is re-proved server-side. The signing service re-checks the registration number and phone against the record before releasing anything.</td><td class="pri">Must</td></tr>
+    <tr><td class="id">VF-8</td><td>The certificate is delivered as a signed URL valid for five minutes, served as an attachment named <code>ARISE-Certificate-{reg}.pdf</code>.</td><td class="pri">Must</td></tr>
+    <tr><td class="id">VF-9</td><td>The download starts without navigating away from the profile page.</td><td class="pri">Should</td></tr>
+    <tr><td class="id">VF-10</td><td>A failed lookup returns one generic message and never reveals which of the two credentials was wrong.</td><td class="pri">Must</td></tr>
+    <tr><td class="id">VF-11</td><td>A "check another record" action clears the profile and returns to the inquiry form.</td><td class="pri">Should</td></tr>
+  </table>
+</section>
+
+<!-- ============ 3.4 ADMIN ============ -->
+<section>
+  <h2 class="sec"><span class="n">3.4</span>Admin Console</h2>
+
+  <h4>Access control</h4>
+  <table>
+    <tr><th class="id">ID</th><th>Requirement</th><th class="pri">Priority</th></tr>
+    <tr><td class="id">AD-1</td><td>Admins sign in with email and password through the platform's authentication service.</td><td class="pri">Must</td></tr>
+    <tr><td class="id">AD-2</td><td>Authentication alone is not authorisation. Admin rights come from a database allowlist, checked by the database on every privileged call.</td><td class="pri">Must</td></tr>
+    <tr><td class="id">AD-3</td><td>A signed-in user who is not on the allowlist sees a clear "not authorised" screen and can reach no data.</td><td class="pri">Must</td></tr>
+    <tr><td class="id">AD-4</td><td>The allowlist itself is unreadable from the browser.</td><td class="pri">Must</td></tr>
+    <tr><td class="id">AD-5</td><td>Sign-out is available from the settings tab.</td><td class="pri">Must</td></tr>
+  </table>
+
+  <h4>Dashboard</h4>
+  <table>
+    <tr><th class="id">ID</th><th>Requirement</th><th class="pri">Priority</th></tr>
+    <tr><td class="id">AD-6</td><td>A welcome card greets the admin by time of day and summarises how many certificates are awaiting issue.</td><td class="pri">Should</td></tr>
+    <tr><td class="id">AD-7</td><td>Statistic tiles show total students, certificates issued, and awaiting issue.</td><td class="pri">Must</td></tr>
+    <tr><td class="id">AD-8</td><td>A recent-activity feed lists the latest registrations and issues with relative timestamps.</td><td class="pri">Should</td></tr>
+  </table>
+
+  <h4>Student management</h4>
+  <table>
+    <tr><th class="id">ID</th><th>Requirement</th><th class="pri">Priority</th></tr>
+    <tr><td class="id">AD-9</td><td>The students tab lists every candidate with passport thumbnail, name, registration number, course, and issue status.</td><td class="pri">Must</td></tr>
+    <tr><td class="id">AD-10</td><td>The list is searchable by name, registration number, email and phone, and filterable by status (all / issued / awaiting).</td><td class="pri">Must</td></tr>
+    <tr><td class="id">AD-11</td><td>The list is paginated, newest registration first.</td><td class="pri">Must</td></tr>
+    <tr><td class="id">AD-12</td><td>A refresh control reloads the list without a full page reload.</td><td class="pri">Should</td></tr>
+    <tr><td class="id">AD-13</td><td>Opening a student shows their full profile: photo, all captured fields, and certificate state.</td><td class="pri">Must</td></tr>
+    <tr><td class="id">AD-14</td><td>The certificates tab shows only candidates with an issued certificate.</td><td class="pri">Must</td></tr>
+  </table>
+
+  <h4>Certificate operations</h4>
+  <table>
+    <tr><th class="id">ID</th><th>Requirement</th><th class="pri">Priority</th></tr>
+    <tr><td class="id">AD-15</td><td>The admin uploads exactly one certificate per student — a PDF of no more than 5&nbsp;MB — from the student's profile.</td><td class="pri">Must</td></tr>
+    <tr><td class="id">AD-16</td><td>Certificates are stored privately as <code>{candidate_id}.pdf</code>; re-uploading replaces the existing file.</td><td class="pri">Must</td></tr>
+    <tr><td class="id">AD-17</td><td>A student is marked "issued" only after the database confirms the file is actually present. A failed upload can never flip the status.</td><td class="pri">Must</td></tr>
+    <tr><td class="id">AD-18</td><td>Issuing sets the verified flag and the issue date, which unlocks the student's download.</td><td class="pri">Must</td></tr>
+    <tr><td class="id">AD-19</td><td>An admin can revoke a certificate: the record returns to awaiting and the stored file is deleted.</td><td class="pri">Must</td></tr>
+    <tr><td class="id">AD-20</td><td>An admin can preview an issued certificate through a short-lived signed URL.</td><td class="pri">Should</td></tr>
+    <tr><td class="id">AD-21</td><td>Every operation reports success or failure through an on-screen message.</td><td class="pri">Must</td></tr>
+  </table>
+
+  <h4>Add student (historic / paper registrations)</h4>
+  <table>
+    <tr><th class="id">ID</th><th>Requirement</th><th class="pri">Priority</th></tr>
+    <tr><td class="id">AD-22</td><td>An admin can create a candidate record directly, for students who originally registered on paper.</td><td class="pri">Must</td></tr>
+    <tr><td class="id">AD-23</td><td>The form collects the same fields as public registration, plus a registration year so past cohorts are numbered correctly.</td><td class="pri">Must</td></tr>
+    <tr><td class="id">AD-24</td><td>Phone and passport photo are mandatory — without them the student could never verify or be identified.</td><td class="pri">Must</td></tr>
+    <tr><td class="id">AD-25</td><td>A new <code>ARISE/ICT</code> number is assigned from the same server-side counter as public registration. Old paper numbers are not preserved.</td><td class="pri">Must</td></tr>
+    <tr><td class="id">AD-26</td><td>The registration year must be between 2000 and next year inclusive.</td><td class="pri">Must</td></tr>
+    <tr><td class="id">AD-27</td><td>Creation is permitted only for allowlisted admins, enforced in the database, not the browser.</td><td class="pri">Must</td></tr>
+    <tr><td class="id">AD-28</td><td>On success the list refreshes and the new student's profile opens immediately, so their certificate can be uploaded in the same sitting.</td><td class="pri">Should</td></tr>
+    <tr><td class="id">AD-29</td><td>The confirmation message states the new registration number.</td><td class="pri">Must</td></tr>
+  </table>
+
+  <h4>Console experience</h4>
+  <table>
+    <tr><th class="id">ID</th><th>Requirement</th><th class="pri">Priority</th></tr>
+    <tr><td class="id">AD-30</td><td>On desktop the console uses a left sidebar; on mobile it switches to a bottom tab bar.</td><td class="pri">Must</td></tr>
+    <tr><td class="id">AD-31</td><td>Modals become bottom sheets on small screens and scroll within the viewport.</td><td class="pri">Must</td></tr>
+    <tr><td class="id">AD-32</td><td>Add Student is reachable from a floating action button on every screen size.</td><td class="pri">Should</td></tr>
+    <tr><td class="id">AD-33</td><td>Modals close on Escape and on clicking the backdrop.</td><td class="pri">Should</td></tr>
+  </table>
+</section>
+
+<!-- ============ 4. USER FLOWS ============ -->
+<section>
+  <h2 class="sec"><span class="n">4.</span>Key User Flows</h2>
+
+  <h3>4.1 Register as a new student</h3>
+  <div class="flow"><ol>
+    <li>The applicant opens <code>/register</code> from the site header or a call to action.</li>
+    <li>They complete the form and attach a passport photo, seeing a preview before submitting.</li>
+    <li>The photo uploads to public photo storage under a random file name.</li>
+    <li>The client calls the registration procedure, which re-validates every field, rejects a duplicate email, derives the current year, and assigns the next number in sequence.</li>
+    <li>The applicant sees a confirmation screen with their registration number and is told to keep it with the phone number they used.</li>
+  </ol></div>
+
+  <h3>4.2 Verify a record and download a certificate</h3>
+  <div class="flow"><ol>
+    <li>The student opens <code>/verify</code> and enters their registration number and phone number.</li>
+    <li>The verification procedure matches both factors, comparing the phone on digits only, and returns a narrow profile — or nothing.</li>
+    <li>The profile renders with the photo, personal details and status. If no certificate has been issued, a pending message shows instead of a download button.</li>
+    <li>If issued, the student presses download. The signing service re-checks both credentials, confirms the certificate exists, and mints a five-minute signed URL.</li>
+    <li>The browser saves the PDF as an attachment without leaving the page.</li>
+  </ol></div>
+
+  <h3>4.3 Issue a certificate</h3>
+  <div class="flow"><ol>
+    <li>The admin signs in at <code>/admin</code>; the database confirms allowlist membership.</li>
+    <li>They filter the students list to <em>Awaiting</em> and open a candidate.</li>
+    <li>They attach the candidate's PDF (≤&nbsp;5&nbsp;MB) and confirm the upload.</li>
+    <li>The file is written to private storage as <code>{candidate_id}.pdf</code>.</li>
+    <li>The issue procedure verifies the file is present, then sets the certificate path, verified flag and issue date. If the file is missing the call fails and the status is unchanged.</li>
+    <li>The student's download unlocks immediately on the verify page.</li>
+  </ol></div>
+
+  <h3>4.4 Add a paper-registered student</h3>
+  <div class="flow"><ol>
+    <li>The admin presses the floating <strong>+</strong> button on the students tab.</li>
+    <li>They complete the add-student sheet, including the original registration year, phone number and passport photo.</li>
+    <li>The photo uploads, then the admin-only creation procedure re-checks the allowlist, validates every field, and assigns a fresh number for that year.</li>
+    <li>The list refreshes, the new profile opens, and the certificate can be uploaded straight away.</li>
+  </ol></div>
+</section>
+
+<!-- ============ 5. DATA MODEL ============ -->
+<section>
+  <h2 class="sec"><span class="n">5.</span>Data Model</h2>
+
+  <h3>5.1 Candidate record</h3>
+  <p>One row per student. The record is created either by public registration or by an admin.</p>
+  <table>
+    <tr><th style="width:34%">Field</th><th style="width:15%">Required</th><th>Notes</th></tr>
+    <tr><td>Internal id</td><td>Yes</td><td>System-generated; also the certificate file name. Never exposed publicly.</td></tr>
+    <tr><td>Full name</td><td>Yes</td><td>Minimum two characters.</td></tr>
+    <tr><td>Email</td><td>No</td><td>Unique when present; matched case-insensitively.</td></tr>
+    <tr><td>Registration number</td><td>Yes</td><td>Unique. Server-assigned, format <code>ARISE/ICT/{year}/{0000}</code>.</td></tr>
+    <tr><td>Registration year</td><td>Yes</td><td>Derived server-side, or supplied by an admin for a historic cohort.</td></tr>
+    <tr><td>Passport photo</td><td>Yes</td><td>Public URL of the uploaded image.</td></tr>
+    <tr><td>Phone</td><td>Yes in practice</td><td>Second verification factor; a record without it can never be verified.</td></tr>
+    <tr><td>Occupation, religion</td><td>Yes</td><td>Enforced at the database level.</td></tr>
+    <tr><td>Date of birth</td><td>No</td><td>Used to compute age on the profile; never returned directly.</td></tr>
+    <tr><td>State of origin, LGA, address</td><td>No</td><td>State of origin appears on the public profile; address does not.</td></tr>
+    <tr><td>Gender, marital status</td><td>No</td><td>Marital status appears on the public profile.</td></tr>
+    <tr><td>Course, class schedule</td><td>No</td><td>Course appears on the public profile.</td></tr>
+    <tr><td>Last institution</td><td>No</td><td>Admin view only.</td></tr>
+    <tr><td>Next of kin name and phone</td><td>No</td><td>Admin view only.</td></tr>
+    <tr><td>Certificate path</td><td>No</td><td>Empty until issued. Never exposed publicly.</td></tr>
+    <tr><td>Verified flag</td><td>Yes</td><td>False on registration; true once a certificate is issued.</td></tr>
+    <tr><td>Issue date</td><td>No</td><td>Set on issue, cleared on revoke.</td></tr>
+    <tr><td>Created at</td><td>Yes</td><td>Registration timestamp; drives ordering and the activity feed.</td></tr>
+  </table>
+
+  <h3>5.2 Supporting records</h3>
+  <ul>
+    <li><strong>Registration counters</strong> — one row per year holding the last sequence issued, keeping numbers dense and collision-free.</li>
+    <li><strong>Admin allowlist</strong> — the set of email addresses permitted to administer the portal. Unreadable from the browser; an admin is added by inserting their address after their sign-in account exists.</li>
+  </ul>
+
+  <h3>5.3 Storage</h3>
+  <table>
+    <tr><th style="width:22%">Store</th><th style="width:14%">Visibility</th><th>Contents and rules</th></tr>
+    <tr><td><strong>Passports</strong></td><td>Public</td>
+        <td>Passport photos under random file names. Publicly readable so profiles render; uploads accepted during registration. JPEG or PNG, ≤&nbsp;5&nbsp;MB.</td></tr>
+    <tr><td><strong>Certificates</strong></td><td>Private</td>
+        <td>One PDF per student named <code>{candidate_id}.pdf</code>. No public access of any kind. Read and written only by allowlisted admins or the signing service; students receive five-minute signed URLs. PDF only, ≤&nbsp;5&nbsp;MB.</td></tr>
+  </table>
+</section>
+
+<!-- ============ 6. SECURITY ============ -->
+<section>
+  <h2 class="sec"><span class="n">6.</span>Security Requirements</h2>
+
+  <div class="box">
+    <div class="box__t">Governing principle</div>
+    <p><strong>Never trust the client.</strong> The browser holds only a public key and, for staff, a
+       signed-in session. Every rule that matters — who may read, who may write, what a valid record
+       looks like, and what a registration number may be — is enforced by the server.</p>
+  </div>
+
+  <table>
+    <tr><th class="id">ID</th><th>Requirement</th></tr>
+    <tr><td class="id">SC-1</td><td>There is no broad public read of the candidate table. Row-level security is on and denies by default; the public reaches data only through two vetted procedures.</td></tr>
+    <tr><td class="id">SC-2</td><td>Public reads require both the registration number and the phone number. The database cannot be enumerated with a registration number alone.</td></tr>
+    <tr><td class="id">SC-3</td><td>The public profile returns a deliberately narrow field set. Internal id, certificate path, email, address and date of birth are excluded.</td></tr>
+    <tr><td class="id">SC-4</td><td>Writes are only possible through vetted procedures. No table-level insert or update permission is granted to anonymous or signed-in users.</td></tr>
+    <tr><td class="id">SC-5</td><td>The certificate store is private with no anonymous access policy at all.</td></tr>
+    <tr><td class="id">SC-6</td><td>Certificate links expire after five minutes and are minted per request.</td></tr>
+    <tr><td class="id">SC-7</td><td>The privileged service key exists only as a server-side secret in the signing service. It is never bundled, exposed, or sent to a browser under any circumstance.</td></tr>
+    <tr><td class="id">SC-8</td><td>The signing service independently re-verifies both credentials before releasing a link — it does not trust that the caller already passed verification.</td></tr>
+    <tr><td class="id">SC-9</td><td>The signing service refuses to sign when a certificate has not been issued.</td></tr>
+    <tr><td class="id">SC-10</td><td>Admin authority comes from a database allowlist evaluated on the server for every privileged call. Modified client code cannot grant it.</td></tr>
+    <tr><td class="id">SC-11</td><td>The allowlist is unreadable from the browser.</td></tr>
+    <tr><td class="id">SC-12</td><td>Admin read access to candidates is scoped to allowlisted admins; anonymous visitors are never granted it.</td></tr>
+    <tr><td class="id">SC-13</td><td>Registration numbers are generated exclusively server-side by an internal routine the public cannot call directly.</td></tr>
+    <tr><td class="id">SC-14</td><td>Registration years are derived from the server clock for public registration; an admin-supplied year is range-checked.</td></tr>
+    <tr><td class="id">SC-15</td><td>File type and size limits are enforced for both uploads: images (JPEG/PNG) and certificates (PDF), each ≤&nbsp;5&nbsp;MB.</td></tr>
+    <tr><td class="id">SC-16</td><td>Certificate issue is transactionally safe: the status cannot be set unless the file is confirmed present.</td></tr>
+    <tr><td class="id">SC-17</td><td>Error messages are generic. Failed verification never discloses which credential was wrong, and internal errors are never surfaced verbatim.</td></tr>
+  </table>
+
+  <div class="box box--warn">
+    <div class="box__t">Accepted trade-offs</div>
+    <p><strong>Passport photos are publicly readable.</strong> They sit under unguessable random file
+       names, but anyone holding the exact URL can view the image. This is accepted so profiles render
+       without a signing round-trip; the URL is only disclosed after a successful two-factor lookup.</p>
+    <p><strong>Verification is credential-based, not rate-limited in the application.</strong> Guessing
+       requires a valid registration number and its matching phone number together. Adding request
+       throttling at the edge is a recommended follow-up.</p>
+    <p><strong>Every admin is equal.</strong> There are no tiers; anyone on the allowlist can add
+       students and issue or revoke certificates.</p>
+  </div>
+</section>
+
+<!-- ============ 7. TECHNICAL ============ -->
+<section>
+  <h2 class="sec"><span class="n">7.</span>Technical Design</h2>
+
+  <h3>7.1 Stack</h3>
+  <table>
+    <tr><th style="width:28%">Layer</th><th>Choice</th></tr>
+    <tr><td>Application</td><td>React 18 with TypeScript, bundled by Vite; a single-page app with client-side routing.</td></tr>
+    <tr><td>Styling</td><td>One hand-authored stylesheet using design tokens; no CSS framework.</td></tr>
+    <tr><td>Icons</td><td>A single icon library used consistently across the site and console.</td></tr>
+    <tr><td>Backend</td><td>Managed Postgres with row-level security, authentication, object storage and edge functions.</td></tr>
+    <tr><td>Certificate signing</td><td>A dedicated server-side function — the only holder of the privileged key.</td></tr>
+    <tr><td>Build</td><td>Type-check then bundle. The build fails on any type error or unused symbol.</td></tr>
+    <tr><td>Hosting</td><td>Static hosting with a single-page-app rewrite rule.</td></tr>
+  </table>
+
+  <h3>7.2 Server-side entry points</h3>
+  <table>
+    <tr><th style="width:30%">Entry point</th><th style="width:16%">Caller</th><th>Responsibility</th></tr>
+    <tr><td>Register candidate</td><td>Public</td>
+        <td>Validate, reject duplicate email, derive the year, assign a number, insert the record, return the number.</td></tr>
+    <tr><td>Verify candidate</td><td>Public</td>
+        <td>Match registration number and phone (digits only); return the narrow profile with a computed age, or nothing.</td></tr>
+    <tr><td>Certificate signing</td><td>Public</td>
+        <td>Re-verify both credentials, confirm the certificate is issued, return a five-minute signed download link.</td></tr>
+    <tr><td>Issue certificate</td><td>Admin</td>
+        <td>Confirm the allowlist, confirm the file exists, then set path, verified flag and issue date.</td></tr>
+    <tr><td>Revoke certificate</td><td>Admin</td>
+        <td>Confirm the allowlist, then clear path, verified flag and issue date.</td></tr>
+    <tr><td>Add candidate</td><td>Admin</td>
+        <td>Confirm the allowlist, validate as for public registration plus a year range check, assign a number, insert, return id and number.</td></tr>
+    <tr><td>Admin check</td><td>Admin</td>
+        <td>Report whether the signed-in address is on the allowlist.</td></tr>
+  </table>
+
+  <div class="box">
+    <div class="box__t">Why procedures rather than direct table access</div>
+    <p>Row-level security denies everything by default and no write permission is granted to any browser-facing
+       role. Each procedure runs with elevated rights but only performs its one vetted operation, after
+       re-validating its inputs. This makes the set of possible writes finite and auditable: the browser cannot
+       compose an arbitrary query, only invoke one of these.</p>
+  </div>
+
+  <h3>7.3 Configuration</h3>
+  <ul>
+    <li>The client is configured with the backend URL and the public key only. Both are safe to ship.</li>
+    <li>The privileged service key is injected into the signing function by the platform and is never present in the frontend build.</li>
+    <li>Schema changes are applied by running the schema file, which is written to be safely re-runnable.</li>
+  </ul>
+
+  <h3>7.4 Deployment checklist</h3>
+  <ol>
+    <li>Run the schema file against the project database.</li>
+    <li>Add each administrator's email to the allowlist after creating their sign-in account.</li>
+    <li>Confirm both storage buckets exist with the correct visibility — passports public, certificates private.</li>
+    <li>Deploy the certificate signing function.</li>
+    <li>Build and deploy the frontend with the public configuration values set.</li>
+    <li>Smoke test: register a candidate, verify it, issue a certificate, download it, then revoke it.</li>
+  </ol>
+</section>
+
+<!-- ============ 8. NFR ============ -->
+<section>
+  <h2 class="sec"><span class="n">8.</span>Non-Functional Requirements</h2>
+
+  <table>
+    <tr><th style="width:24%">Area</th><th>Requirement</th></tr>
+    <tr><td><strong>Responsiveness</strong></td>
+        <td>Every page works from 360&nbsp;px upward. The console switches to a bottom tab bar and bottom-sheet modals on small screens; tables reflow into cards.</td></tr>
+    <tr><td><strong>Performance</strong></td>
+        <td>The production bundle stays modest (currently around 135&nbsp;KB of script and 11&nbsp;KB of styles compressed). Uploads are capped at 5&nbsp;MB. Verification is a single indexed lookup.</td></tr>
+    <tr><td><strong>Accessibility</strong></td>
+        <td>Labelled form controls, dialog roles on modals, accessible names on icon-only buttons, alerts announced to assistive technology, Escape closes modals, visible focus.</td></tr>
+    <tr><td><strong>Usability</strong></td>
+        <td>Loading states on every asynchronous action, plain-English errors, and a confirmation message after each admin operation.</td></tr>
+    <tr><td><strong>Reliability</strong></td>
+        <td>Certificate status cannot desynchronise from stored files. A failed upload leaves the record untouched.</td></tr>
+    <tr><td><strong>Maintainability</strong></td>
+        <td>Validation rules and option lists live in one shared module used by both the public form and the admin form. The build rejects unused code and type errors.</td></tr>
+    <tr><td><strong>Browser support</strong></td>
+        <td>Current versions of Chrome, Edge, Firefox and Safari, on desktop and mobile.</td></tr>
+    <tr><td><strong>Privacy</strong></td>
+        <td>Only what a profile needs is returned publicly. Contact details, address and next of kin remain admin-only.</td></tr>
+  </table>
+</section>
+
+<!-- ============ 9. STATUS & FUTURE ============ -->
+<section>
+  <h2 class="sec"><span class="n">9.</span>Status &amp; Future Work</h2>
+
+  <h3>9.1 Delivered</h3>
+  <table>
+    <tr><th style="width:38%">Capability</th><th style="width:16%">Status</th><th>Note</th></tr>
+    <tr><td>Landing and about pages</td><td><span class="pill pill--done">Built</span></td><td>Real programme, sponsor and testimonial content.</td></tr>
+    <tr><td>Student registration</td><td><span class="pill pill--done">Built</span></td><td>Server validation, server-assigned numbers, photo upload.</td></tr>
+    <tr><td>Two-factor verification</td><td><span class="pill pill--done">Built</span></td><td>Narrow profile, computed age, status badge.</td></tr>
+    <tr><td>Certificate download</td><td><span class="pill pill--done">Built</span></td><td>Five-minute signed URLs from the signing function.</td></tr>
+    <tr><td>Admin authentication and gate</td><td><span class="pill pill--done">Built</span></td><td>Database allowlist, enforced server-side.</td></tr>
+    <tr><td>Dashboard, list, search, filter</td><td><span class="pill pill--done">Built</span></td><td>Statistics, activity feed, pagination.</td></tr>
+    <tr><td>Issue and revoke certificates</td><td><span class="pill pill--done">Built</span></td><td>File-presence check before status change.</td></tr>
+    <tr><td>Add student (historic)</td><td><span class="pill pill--done">Built</span></td><td>Admin-only creation with a chosen registration year.</td></tr>
+    <tr><td>Mobile console experience</td><td><span class="pill pill--done">Built</span></td><td>Tab bar, bottom sheets, floating action button.</td></tr>
+  </table>
+
+  <h3>9.2 Outstanding before launch</h3>
+  <ul>
+    <li>Apply the current schema — including the admin creation procedure — to the production database.</li>
+    <li>Add the live administrator addresses to the allowlist.</li>
+    <li>Run the end-to-end smoke test against production.</li>
+  </ul>
+
+  <h3>9.3 Candidate future work</h3>
+  <table>
+    <tr><th style="width:38%">Item</th><th style="width:16%">Value</th><th>Rationale</th></tr>
+    <tr><td>Rate limiting on verification and signing</td><td><span class="pill pill--todo">High</span></td><td>Removes the main brute-force surface that remains.</td></tr>
+    <tr><td>Edit an existing candidate</td><td><span class="pill pill--todo">High</span></td><td>Today a typo cannot be corrected from the console.</td></tr>
+    <tr><td>Bulk import of historic students</td><td><span class="pill pill--todo">Medium</span></td><td>One-at-a-time entry does not scale to a large backlog.</td></tr>
+    <tr><td>Admin action audit log</td><td><span class="pill pill--todo">Medium</span></td><td>Records who issued or revoked what, and when.</td></tr>
+    <tr><td>Email or SMS on issue</td><td><span class="pill pill--todo">Medium</span></td><td>Students currently have to check back themselves.</td></tr>
+    <tr><td>Certificate generation from a template</td><td><span class="pill pill--todo">Medium</span></td><td>Removes the manual step of producing each PDF.</td></tr>
+    <tr><td>Public QR verification for employers</td><td><span class="pill pill--todo">Low</span></td><td>Third-party checking without the student's phone number.</td></tr>
+    <tr><td>Private passport storage</td><td><span class="pill pill--todo">Low</span></td><td>Closes the accepted trade-off in §6.</td></tr>
+  </table>
+
+  <h3>9.4 Success measures</h3>
+  <ul>
+    <li>The share of new enrolments completed online rather than on paper.</li>
+    <li>Successful verifications as a proportion of attempts (a low rate suggests students are losing their credentials).</li>
+    <li>Median time from programme completion to certificate issued.</li>
+    <li>Certificate downloads per issued certificate.</li>
+    <li>Registration form completion rate — starts versus submissions.</li>
+  </ul>
+
+  <div class="foot">
+    ARISE ICT HUB — Candidate Registration &amp; Certificate Verification Portal · Product Requirements Document · Version 0.1.0 · 12 August 2026
+  </div>
+</section>
+
+</body>
+</html>

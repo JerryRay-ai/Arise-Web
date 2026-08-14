@@ -1,0 +1,33 @@
+# Supabase CLI config for ARISE ICT HUB.
+# These functions are intentionally anonymous-capable: they perform their own
+# verification inside the handler (hCaptcha for `register`; phone + reg number
+# re-checks for `passport` and `certificate`; magic-byte/size checks for
+# `upload-passport`). With verify_jwt = true (the CLI default) the platform
+# rejects the browser's CORS preflight (OPTIONS carries no Authorization
+# header), so every browser call fails with "Failed to send request to the
+# Edge Function". Set verify_jwt = false and authenticate inside the code.
+project_id = "xvwakbodfenhtjwnxlnz"
+
+[functions.upload-passport]
+verify_jwt = false
+
+[functions.passport]
+verify_jwt = false
+
+[functions.register]
+verify_jwt = false
+
+[functions.certificate]
+verify_jwt = false
+
+[functions.verify]
+verify_jwt = false
+
+[functions.share-story]
+verify_jwt = false
+
+[functions.log-login-attempt]
+verify_jwt = false
+
+[functions.health]
+verify_jwt = false

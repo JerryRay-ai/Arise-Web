@@ -1,0 +1,19 @@
+{
+  "rewrites": [{ "source": "/(.*)", "destination": "/index.html" }],
+  "headers": [
+    {
+      "source": "/(.*)",
+      "headers": [
+        { "key": "X-Content-Type-Options", "value": "nosniff" },
+        { "key": "X-Frame-Options", "value": "DENY" },
+        { "key": "Referrer-Policy", "value": "strict-origin-when-cross-origin" },
+        { "key": "Strict-Transport-Security", "value": "max-age=63072000; includeSubDomains" },
+        { "key": "Permissions-Policy", "value": "camera=(), microphone=(), geolocation=()" },
+        {
+          "key": "Content-Security-Policy",
+          "value": "default-src 'self'; script-src 'self' https://js.hcaptcha.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://assets.hcaptcha.com https://newassets.hcaptcha.com; font-src 'self' https://fonts.gstatic.com https://assets.hcaptcha.com; img-src 'self' data: blob: https://xvwakbodfenhtjwnxlnz.supabase.co https://img.hcaptcha.com https://assets.hcaptcha.com; connect-src 'self' https://xvwakbodfenhtjwnxlnz.supabase.co wss://xvwakbodfenhtjwnxlnz.supabase.co https://hcaptcha.com https://api.hcaptcha.com; frame-src https://newassets.hcaptcha.com https://hcaptcha.com; child-src https://newassets.hcaptcha.com; frame-ancestors 'none'; base-uri 'self'; form-action 'self'"
+        }
+      ]
+    }
+  ]
+}

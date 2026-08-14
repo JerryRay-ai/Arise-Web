@@ -1,0 +1,37 @@
+{
+  "version": "5",
+  "redirects": {
+    "https://esm.sh/@supabase/supabase-js@2": "https://esm.sh/@supabase/supabase-js@2.112.3"
+  },
+  "remote": {
+    "https://esm.sh/@supabase/supabase-js@2.112.3": "f6b9130984301066587e8917dfab3b3d60be47dc966bd3d04c733bc9423c1cf9"
+  },
+  "workspace": {
+    "packageJson": {
+      "dependencies": [
+        "npm:@capacitor/android@^8.5.0",
+        "npm:@capacitor/app@^8.1.1",
+        "npm:@capacitor/assets@^3.0.5",
+        "npm:@capacitor/camera@^8.2.2",
+        "npm:@capacitor/cli@^8.5.0",
+        "npm:@capacitor/core@^8.5.0",
+        "npm:@capacitor/filesystem@^8.1.2",
+        "npm:@capacitor/share@^8.0.1",
+        "npm:@capacitor/splash-screen@^8.0.2",
+        "npm:@capacitor/status-bar@^8.0.3",
+        "npm:@hcaptcha/react-hcaptcha@^2.1.0",
+        "npm:@supabase/supabase-js@^2.112.2",
+        "npm:@types/react-dom@^18.3.1",
+        "npm:@types/react@^18.3.12",
+        "npm:@vitejs/plugin-react@^4.3.3",
+        "npm:lucide-react@0.454",
+        "npm:react-dom@^18.3.1",
+        "npm:react-router-dom@^6.30.4",
+        "npm:react@^18.3.1",
+        "npm:typescript@^5.6.3",
+        "npm:vite@^5.4.10",
+        "npm:vitest@^4.1.10"
+      ]
+    }
+  }
+}
