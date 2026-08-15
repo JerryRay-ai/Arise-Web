@@ -64,6 +64,8 @@ import {
   RELIGIONS,
 } from '../lib/validation'
 import type { Candidate, Experience } from '../lib/types'
+import { NIGERIA_STATES, getLgas } from '../data/nigeria'
+import { clearDraft, dataUrlToFile, loadDraft, saveDraft } from '../lib/draft'
 
 type AuthState = 'loading' | 'signed-out' | 'mfa-required' | 'checking' | 'not-admin' | 'admin'
 type View = 'dashboard' | 'students' | 'settings' | 'stories' | 'security'
@@ -826,6 +828,13 @@ function AdminApp({
   const [adding, setAdding] = useState(false)
   const [importing, setImporting] = useState(false)
   const [flash, setFlash] = useState<Flash | null>(null)
+
+  // If Android killed the WebView mid "Add Student" (common on low-RAM devices
+  // during the camera trip), re-open the modal so the saved draft is restored.
+  useEffect(() => {
+    if (loadDraft<Record<string, unknown>>('add-student')) setAdding(true)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
   // Signed URLs for the PRIVATE passports bucket, keyed by candidate id.
   const [photoUrls, setPhotoUrls] = useState<Record<string, string>>({})
 
@@ -2949,6 +2958,27 @@ function addErrorMessage(code: string): string {
 // ---- Add a manually-registered student ---------------------------------
 // Creates the candidate row via the admin-only RPC, then hands the new id
 // back so the parent can open its profile and attach the certificate.
+interface AddStudentDraft {
+  fullName: string
+  email: string
+  phone: string
+  year: string
+  course: string
+  dob: string
+  stateOfOrigin: string
+  lga: string
+  occupation: string
+  religion: string
+  maritalStatus: string
+  gender: string
+  classSchedule: string
+  lastInstitution: string
+  nokName: string
+  nokPhone: string
+  address: string
+  photoDataUrl: string | null
+}
+
 function AddStudentModal({
   onClose,
   onCreated,
@@ -2974,20 +3004,74 @@ function AddStudentModal({
   const [nokName, setNokName] = useState('')
   const [nokPhone, setNokPhone] = useState('')
   const [address, setAddress] = useState('')
+  const DRAFT_KEY = 'add-student'
   const [passport, setPassport] = useState<File | null>(null)
   const [preview, setPreview] = useState<string | null>(null)
+  const [photoDataUrl, setPhotoDataUrl] = useState<string | null>(null)
 
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
+  // Closing the modal abandons the in-progress form, so clear its draft.
+  const close = () => {
+    clearDraft(DRAFT_KEY)
+    onClose()
+  }
+
   // Close on Escape (matches the profile modal).
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onClose()
+      if (e.key === 'Escape') close()
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
-  }, [onClose])
+  }, [close])
+
+  // Restore a saved draft (e.g. after Android killed the WebView while the
+  // camera was open) so the admin picks up exactly where they left off.
+  useEffect(() => {
+    const d = loadDraft<AddStudentDraft>(DRAFT_KEY)
+    if (!d) return
+    setFullName(d.fullName ?? '')
+    setEmail(d.email ?? '')
+    setPhone(d.phone ?? '')
+    setYear(d.year ?? String(thisYear))
+    setCourse(d.course ?? '')
+    setDob(d.dob ?? '')
+    setStateOfOrigin(d.stateOfOrigin ?? '')
+    setLga(d.lga ?? '')
+    setOccupation(d.occupation ?? '')
+    setReligion(d.religion ?? '')
+    setMaritalStatus(d.maritalStatus ?? '')
+    setGender(d.gender ?? '')
+    setClassSchedule(d.classSchedule ?? '')
+    setLastInstitution(d.lastInstitution ?? '')
+    setNokName(d.nokName ?? '')
+    setNokPhone(d.nokPhone ?? '')
+    setAddress(d.address ?? '')
+    if (d.photoDataUrl) {
+      const file = dataUrlToFile(d.photoDataUrl, 'passport.jpg')
+      setPhotoDataUrl(d.photoDataUrl)
+      setPassport(file)
+      setPreview(URL.createObjectURL(file))
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  // Auto-save the whole form (fields + photo) as a debounced draft so any
+  // reload — the slow-device camera kill included — is lossless.
+  useEffect(() => {
+    const t = setTimeout(() => {
+      saveDraft(DRAFT_KEY, {
+        fullName, email, phone, year, course, dob, stateOfOrigin, lga,
+        occupation, religion, maritalStatus, gender, classSchedule,
+        lastInstitution, nokName, nokPhone, address, photoDataUrl,
+      })
+    }, 400)
+    return () => clearTimeout(t)
+  }, [fullName, email, phone, year, course, dob, stateOfOrigin, lga,
+      occupation, religion, maritalStatus, gender, classSchedule,
+      lastInstitution, nokName, nokPhone, address, photoDataUrl])
 
   // Release the object URL when it changes or the modal unmounts.
   useEffect(() => {
@@ -3002,6 +3086,7 @@ function AddStudentModal({
     if (!file) {
       setPassport(null)
       setPreview(null)
+      setPhotoDataUrl(null)
       return
     }
     const pErr = passportError(file)
@@ -3009,16 +3094,23 @@ function AddStudentModal({
       setError(pErr)
       setPassport(null)
       setPreview(null)
+      setPhotoDataUrl(null)
       return
     }
     setPassport(file)
     setPreview(URL.createObjectURL(file))
+    const reader = new FileReader()
+    reader.onload = () => {
+      if (typeof reader.result === 'string') setPhotoDataUrl(reader.result)
+    }
+    reader.readAsDataURL(file)
   }
 
   function removePassport() {
     if (preview) URL.revokeObjectURL(preview)
     setPassport(null)
     setPreview(null)
+    setPhotoDataUrl(null)
   }
 
   async function onSubmit(e: React.FormEvent) {
@@ -3033,8 +3125,8 @@ function AddStudentModal({
     if (!isValidPhone(phone)) return setError('Please enter a valid phone number.')
     if (!occupation.trim()) return setError('Please enter an occupation.')
     if (!religion) return setError('Please select a religion.')
-    if (!stateOfOrigin.trim()) return setError('Please enter the state of origin.')
-    if (!lga.trim()) return setError('Please enter the LGA.')
+    if (!stateOfOrigin) return setError('Please select the state of origin.')
+    if (!lga) return setError('Please select the LGA.')
     if (!dob) return setError('Please select a date of birth.')
     if (!lastInstitution.trim()) return setError('Please enter the last institution.')
     if (!maritalStatus) return setError('Please select a marital status.')
@@ -3117,6 +3209,7 @@ function AddStudentModal({
       const reg = (row?.registration_number ?? '') as string
       if (!id || !reg) throw new Error('Student added, but no reference was returned. Please refresh.')
 
+      clearDraft(DRAFT_KEY)
       await onCreated(id, reg)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Could not add the student.')
@@ -3125,9 +3218,9 @@ function AddStudentModal({
   }
 
   return (
-    <div className="modal" role="dialog" aria-modal="true" aria-label="Add student" onClick={onClose}>
+    <div className="modal" role="dialog" aria-modal="true" aria-label="Add student" onClick={close}>
       <div className="modal__card modal__card--form" onClick={(e) => e.stopPropagation()}>
-        <button type="button" className="modal__close" onClick={onClose} aria-label="Close">
+        <button type="button" className="modal__close" onClick={close} aria-label="Close">
           <X size={20} />
         </button>
 
@@ -3241,22 +3334,36 @@ function AddStudentModal({
               <label className="form__label" htmlFor="as_state">
                 State of Origin
               </label>
-              <input
-                id="as_state" className="form__control" type="text"
-                value={stateOfOrigin} onChange={(e) => setStateOfOrigin(e.target.value)}
+              <select
+                id="as_state" className="form__control form__control--select"
+                value={stateOfOrigin} onChange={(e) => {
+                  setStateOfOrigin(e.target.value)
+                  setLga('')
+                }}
                 required
-              />
+              >
+                <option value="">Select…</option>
+                {NIGERIA_STATES.map((s) => (
+                  <option key={s.name} value={s.name}>{s.name}</option>
+                ))}
+              </select>
             </div>
 
             <div className="form__row">
               <label className="form__label" htmlFor="as_lga">
                 LGA
               </label>
-              <input
-                id="as_lga" className="form__control" type="text"
+              <select
+                id="as_lga" className="form__control form__control--select"
                 value={lga} onChange={(e) => setLga(e.target.value)}
+                disabled={!stateOfOrigin}
                 required
-              />
+              >
+                <option value="">{stateOfOrigin ? 'Select…' : 'Select your state first'}</option>
+                {getLgas(stateOfOrigin).map((l) => (
+                  <option key={l} value={l}>{l}</option>
+                ))}
+              </select>
             </div>
 
             <div className="form__row">
@@ -3374,7 +3481,7 @@ function AddStudentModal({
           </div>
 
           <div className="modal__foot">
-            <button type="button" className="btn btn--ghost" onClick={onClose} disabled={busy}>
+            <button type="button" className="btn btn--ghost" onClick={close} disabled={busy}>
               Cancel
             </button>
             <button type="submit" className="btn btn--green" disabled={busy}>

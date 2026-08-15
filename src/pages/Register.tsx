@@ -1,10 +1,11 @@
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import HCaptcha from '@hcaptcha/react-hcaptcha'
 import { CheckCircle2, ArrowLeft, Loader2, Copy, Check, X } from 'lucide-react'
 import PassportPicker from '../components/PassportPicker'
 import { getSupabase } from '../lib/supabase'
 import { NIGERIA_STATES, getLgas } from '../data/nigeria'
+import { clearDraft, dataUrlToFile, loadDraft, saveDraft } from '../lib/draft'
 import {
   COURSES,
   CLASS_SCHEDULES,
@@ -21,7 +22,28 @@ import {
 
 type Status = 'idle' | 'submitting'
 
+interface RegisterDraft {
+  fullName: string
+  email: string
+  phone: string
+  stateOfOrigin: string
+  lga: string
+  dob: string
+  occupation: string
+  religion: string
+  lastInstitution: string
+  maritalStatus: string
+  nokName: string
+  nokPhone: string
+  gender: string
+  course: string
+  schedule: string
+  address: string
+  photoDataUrl: string | null
+}
+
 export default function Register() {
+  const DRAFT_KEY = 'register'
   const [fullName, setFullName] = useState('')
   const [email, setEmail] = useState('')
   const [phone, setPhone] = useState('')
@@ -40,6 +62,8 @@ export default function Register() {
   const [address, setAddress] = useState('')
   const [passport, setPassport] = useState<File | null>(null)
   const [preview, setPreview] = useState<string | null>(null)
+  const [photoDataUrl, setPhotoDataUrl] = useState<string | null>(null)
+  const [restored, setRestored] = useState(false)
 
   const [status, setStatus] = useState<Status>('idle')
   const [error, setError] = useState<string | null>(null)
@@ -61,6 +85,7 @@ export default function Register() {
     if (!file) {
       setPassport(null)
       setPreview(null)
+      setPhotoDataUrl(null)
       return
     }
     const pErr = passportError(file)
@@ -68,17 +93,70 @@ export default function Register() {
       setError(pErr)
       setPassport(null)
       setPreview(null)
+      setPhotoDataUrl(null)
       return
     }
     setPassport(file)
     setPreview(URL.createObjectURL(file))
+    const reader = new FileReader()
+    reader.onload = () => {
+      if (typeof reader.result === 'string') setPhotoDataUrl(reader.result)
+    }
+    reader.readAsDataURL(file)
   }
 
   function removePassport() {
     if (preview) URL.revokeObjectURL(preview)
     setPassport(null)
     setPreview(null)
+    setPhotoDataUrl(null)
   }
+
+  // Restore a previously-saved draft (e.g. after a tab crash or a slow-device
+  // reload mid-registration) so the user continues, not restarts.
+  useEffect(() => {
+    const d = loadDraft<RegisterDraft>(DRAFT_KEY)
+    if (!d) return
+    setFullName(d.fullName ?? '')
+    setEmail(d.email ?? '')
+    setPhone(d.phone ?? '')
+    setStateOfOrigin(d.stateOfOrigin ?? '')
+    setLga(d.lga ?? '')
+    setDob(d.dob ?? '')
+    setOccupation(d.occupation ?? '')
+    setReligion(d.religion ?? '')
+    setLastInstitution(d.lastInstitution ?? '')
+    setMaritalStatus(d.maritalStatus ?? '')
+    setNokName(d.nokName ?? '')
+    setNokPhone(d.nokPhone ?? '')
+    setGender(d.gender ?? '')
+    setCourse(d.course ?? '')
+    setSchedule(d.schedule ?? '')
+    setAddress(d.address ?? '')
+    if (d.photoDataUrl) {
+      const file = dataUrlToFile(d.photoDataUrl, 'passport.jpg')
+      setPhotoDataUrl(d.photoDataUrl)
+      setPassport(file)
+      setPreview(URL.createObjectURL(file))
+    }
+    setRestored(true)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  // Auto-save the form (fields + photo) as a debounced draft so any reload
+  // mid-registration is lossless.
+  useEffect(() => {
+    const t = setTimeout(() => {
+      saveDraft(DRAFT_KEY, {
+        fullName, email, phone, stateOfOrigin, lga, dob, occupation, religion,
+        lastInstitution, maritalStatus, nokName, nokPhone, gender, course,
+        schedule, address, photoDataUrl,
+      })
+    }, 400)
+    return () => clearTimeout(t)
+  }, [fullName, email, phone, stateOfOrigin, lga, dob, occupation, religion,
+      lastInstitution, maritalStatus, nokName, nokPhone, gender, course,
+      schedule, address, photoDataUrl])
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -185,6 +263,7 @@ export default function Register() {
       if (!reg) throw new Error('Registration succeeded but no number was returned.')
 
       setRegNumber(reg)
+      clearDraft(DRAFT_KEY)
       window.scrollTo({ top: 0, behavior: 'smooth' })
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Something went wrong. Please try again.')
@@ -264,6 +343,12 @@ export default function Register() {
 
         <form className="regform" onSubmit={onSubmit} noValidate>
           <h2 className="regform__heading">Student’s Registration Form</h2>
+
+          {restored && (
+            <div className="notice notice--info" role="status">
+              We restored your saved form. Review your details and complete the CAPTCHA to submit.
+            </div>
+          )}
 
           {error && (
             <div className="notice notice--error" role="alert">

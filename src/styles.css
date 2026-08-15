@@ -1640,6 +1640,11 @@ h4 {
   color: var(--green-dark);
   border: 1px solid #c9e2cf;
 }
+.notice--info {
+  background: #eef4ff;
+  color: #1d4ed8;
+  border: 1px solid #c7d9f7;
+}
 
 /* Registration number box */
 .regbox {

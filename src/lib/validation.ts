@@ -1,4 +1,4 @@
-export const PASSPORT_MAX_BYTES = 5 * 1024 * 1024 // 2 MB
+export const PASSPORT_MAX_BYTES = 5 * 1024 * 1024 // 5 MB
 export const PASSPORT_TYPES = ['image/jpeg', 'image/png'] as const
 
 // Certificates the admin uploads: PDF only, up to 5 MB.
@@ -13,7 +13,7 @@ export const COURSES = [
   'UI/UX Design',
   'Graphic Design',
   'Data Analytics',
-  ' Basic Computer Education',
+  'Basic Computer Education',
 ] as const
 
 export const CLASS_SCHEDULES = ['9am - 11am', '11am - 1pm', '2pm - 4pm'] as const

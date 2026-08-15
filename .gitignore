@@ -30,3 +30,5 @@ backups/
 
 # Logs
 *.log
+# Documents
+*.pdf

@@ -41,8 +41,8 @@ export default function PassportPicker({
       const photo = await CapCamera.getPhoto({
         resultType: CameraResultType.DataUrl,
         source,
-        quality: 88,
-        width: 900,
+        quality: 80,
+        width: 600,
         correctOrientation: true,
       })
       emitFile(new File([dataUrlToBlob(photo.dataUrl)], `passport-${Date.now()}.jpg`, { type: 'image/jpeg' }))
