@@ -4,6 +4,7 @@ import HCaptcha from '@hcaptcha/react-hcaptcha'
 import { CheckCircle2, ArrowLeft, Loader2, Copy, Check, X } from 'lucide-react'
 import PassportPicker from '../components/PassportPicker'
 import { getSupabase } from '../lib/supabase'
+import { NIGERIA_STATES, getLgas } from '../data/nigeria'
 import {
   COURSES,
   CLASS_SCHEDULES,
@@ -89,8 +90,8 @@ export default function Register() {
     if (!isValidName(name)) return setError('Please enter your full name.')
     if (mail && !isValidEmail(mail)) return setError('Please enter a valid email address.')
     if (!isValidPhone(phone)) return setError('Please enter a valid phone number.')
-    if (!stateOfOrigin.trim()) return setError('Please enter your state of origin.')
-    if (!lga.trim()) return setError('Please enter your local government area.')
+    if (!stateOfOrigin) return setError('Please select your state of origin.')
+    if (!lga) return setError('Please select your local government area.')
     if (!dob) return setError('Please enter your date of birth.')
     if (!occupation.trim()) return setError('Please enter your occupation.')
     if (!religion) return setError('Please select your religion.')
@@ -301,18 +302,32 @@ export default function Register() {
 
           <div className="form__row">
             <label className="form__label" htmlFor="state">State of Origin</label>
-            <input
-              id="state" className="form__control" type="text"
-              value={stateOfOrigin} onChange={(e) => setStateOfOrigin(e.target.value)}
-            />
+            <select
+              id="state" className="form__control form__control--select"
+              value={stateOfOrigin} onChange={(e) => {
+                setStateOfOrigin(e.target.value)
+                setLga('')
+              }}
+            >
+              <option value="">Select…</option>
+              {NIGERIA_STATES.map((s) => (
+                <option key={s.name} value={s.name}>{s.name}</option>
+              ))}
+            </select>
           </div>
 
           <div className="form__row">
             <label className="form__label" htmlFor="lga">Local Government Area</label>
-            <input
-              id="lga" className="form__control" type="text"
+            <select
+              id="lga" className="form__control form__control--select"
               value={lga} onChange={(e) => setLga(e.target.value)}
-            />
+              disabled={!stateOfOrigin}
+            >
+              <option value="">{stateOfOrigin ? 'Select…' : 'Select your state first'}</option>
+              {getLgas(stateOfOrigin).map((l) => (
+                <option key={l} value={l}>{l}</option>
+              ))}
+            </select>
           </div>
 
           <div className="form__row">
