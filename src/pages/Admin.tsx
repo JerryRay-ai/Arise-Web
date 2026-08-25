@@ -44,6 +44,7 @@ import {
   Download,
   FileSpreadsheet,
   Pencil,
+  SlidersHorizontal,
 } from 'lucide-react'
 import { getSupabase } from '../lib/supabase'
 import PassportPicker from '../components/PassportPicker'
@@ -79,11 +80,12 @@ function passportPath(url: string): string {
   return i >= 0 ? url.slice(i + marker.length) : url
 }
 type StatusFilter = 'all' | 'issued' | 'awaiting'
+type SourceFilter = 'all' | 'online' | 'paper_import'
 type StoryFilter = 'all' | 'pending' | 'approved' | 'rejected'
 type Flash = { kind: 'ok' | 'err'; text: string }
 
 const COLUMNS =
-  'id, full_name, email, registration_number, exam_year, passport_url, phone, course, date_of_birth, state_of_origin, marital_status, lga, occupation, religion, last_institution, next_of_kin_name, next_of_kin_phone, gender, class_schedule, address, certificate_url, is_verified, issue_date, created_at'
+  'id, full_name, email, registration_number, exam_year, passport_url, phone, course, date_of_birth, state_of_origin, marital_status, lga, occupation, religion, last_institution, next_of_kin_name, next_of_kin_phone, gender, class_schedule, address, source, certificate_url, is_verified, issue_date, created_at'
 
 const PAGE_SIZE = 8
 
@@ -801,6 +803,14 @@ const FILTERS: { key: StatusFilter; label: string }[] = [
   { key: 'awaiting', label: 'Awaiting' },
 ]
 
+// Source chips on the Students view: separate the current online intake from
+// the bulk-imported paper-form records so contacting new students is one click.
+const SOURCE_FILTERS: { key: SourceFilter; label: string }[] = [
+  { key: 'all', label: 'All sources' },
+  { key: 'online', label: 'Online' },
+  { key: 'paper_import', label: 'Paper import' },
+]
+
 // Story moderation chips. Defaults to "Pending" — the actionable queue.
 const STORY_FILTERS: { key: StoryFilter; label: string }[] = [
   { key: 'pending', label: 'Pending' },
@@ -824,6 +834,9 @@ function AdminApp({
   const [error, setError] = useState<string | null>(null)
   const [query, setQuery] = useState('')
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all')
+  const [sourceFilter, setSourceFilter] = useState<SourceFilter>('all')
+  const [filtersOpen, setFiltersOpen] = useState(false)
+  const filtersRef = useRef<HTMLDivElement | null>(null)
   const [page, setPage] = useState(1)
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const [adding, setAdding] = useState(false)
@@ -881,6 +894,28 @@ function AdminApp({
     const t = setTimeout(() => setFlash(null), 4500)
     return () => clearTimeout(t)
   }, [flash])
+
+  const activeFilterCount =
+    (statusFilter !== 'all' ? 1 : 0) + (sourceFilter !== 'all' ? 1 : 0)
+
+  // Close the filter popover on outside click or Escape.
+  useEffect(() => {
+    if (!filtersOpen) return
+    const onDown = (e: MouseEvent) => {
+      if (filtersRef.current && !filtersRef.current.contains(e.target as Node)) {
+        setFiltersOpen(false)
+      }
+    }
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setFiltersOpen(false)
+    }
+    document.addEventListener('mousedown', onDown)
+    document.addEventListener('keydown', onKey)
+    return () => {
+      document.removeEventListener('mousedown', onDown)
+      document.removeEventListener('keydown', onKey)
+    }
+  }, [filtersOpen])
 
   // Auto sign-out after 30 minutes of inactivity. Defense-in-depth on top of
   // the session expiry configured in Supabase Auth; keeps an unlocked console
@@ -1266,13 +1301,18 @@ function AdminApp({
   }, [rows])
 
   // ---- Filtering + pagination ------------------------------------------
-  // Students view honours the status chips (All / Issued / Awaiting).
+  // Students view honours the status chips (All / Issued / Awaiting) and the
+  // source chips (All sources / Online / Paper import).
   const base = useMemo(() => {
+    let out = rows
     if (view === 'students' && statusFilter !== 'all') {
-      return rows.filter((r) => (statusFilter === 'issued' ? isIssued(r) : !isIssued(r)))
+      out = out.filter((r) => (statusFilter === 'issued' ? isIssued(r) : !isIssued(r)))
     }
-    return rows
-  }, [rows, view, statusFilter])
+    if (view === 'students' && sourceFilter !== 'all') {
+      out = out.filter((r) => (r.source ?? 'online') === sourceFilter)
+    }
+    return out
+  }, [rows, view, statusFilter, sourceFilter])
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase()
@@ -1290,7 +1330,7 @@ function AdminApp({
   // Reset to page 1 whenever the result set changes underneath us.
   useEffect(() => {
     setPage(1)
-  }, [query, view, statusFilter])
+  }, [query, view, statusFilter, sourceFilter])
 
   useEffect(() => {
     if (page > pageCount) setPage(pageCount)
@@ -1300,12 +1340,83 @@ function AdminApp({
   const rangeStart = filtered.length === 0 ? 0 : (page - 1) * PAGE_SIZE + 1
   const rangeEnd = Math.min(page * PAGE_SIZE, filtered.length)
 
-  // Export the currently-visible students as CSV. On the website this triggers
-  // a browser download; in the Android app it writes a temp file and opens the
-  // system share sheet so the admin can save it anywhere.
+  // ---- Advanced export ---------------------------------------------------
+  // The export popover picks its own scope (current filtered view / everything
+  // / online registrations only / paper-import records only) plus an optional
+  // registration-date range, independent of the on-screen filters.
+  type ExportScope = 'current' | 'all' | 'online' | 'paper_import'
+  const EXPORT_SCOPES: { key: ExportScope; label: string }[] = [
+    { key: 'current', label: 'Current view' },
+    { key: 'all', label: 'All students' },
+    { key: 'online', label: 'Online registrations' },
+    { key: 'paper_import', label: 'Paper import records' },
+  ]
+  const [exportOpen, setExportOpen] = useState(false)
+  const [exportScope, setExportScope] = useState<ExportScope>('current')
+  const [exportFrom, setExportFrom] = useState('')
+  const [exportTo, setExportTo] = useState('')
+  const exportRef = useRef<HTMLDivElement | null>(null)
+
+  // Close the export popover on outside click or Escape.
+  useEffect(() => {
+    if (!exportOpen) return
+    const onDown = (e: MouseEvent) => {
+      if (exportRef.current && !exportRef.current.contains(e.target as Node)) {
+        setExportOpen(false)
+      }
+    }
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setExportOpen(false)
+    }
+    document.addEventListener('mousedown', onDown)
+    document.addEventListener('keydown', onKey)
+    return () => {
+      document.removeEventListener('mousedown', onDown)
+      document.removeEventListener('keydown', onKey)
+    }
+  }, [exportOpen])
+
+  const exportRows = useMemo(() => {
+    let out =
+      exportScope === 'current'
+        ? filtered
+        : exportScope === 'online'
+          ? rows.filter((r) => (r.source ?? 'online') === 'online')
+          : exportScope === 'paper_import'
+            ? rows.filter((r) => r.source === 'paper_import')
+            : rows
+    if (exportFrom) {
+      const from = new Date(`${exportFrom}T00:00:00`).getTime()
+      out = out.filter((r) => r.created_at && toTime(r.created_at) >= from)
+    }
+    if (exportTo) {
+      const to = new Date(`${exportTo}T23:59:59.999`).getTime()
+      out = out.filter((r) => r.created_at && toTime(r.created_at) <= to)
+    }
+    return out
+  }, [rows, filtered, exportScope, exportFrom, exportTo])
+
+  const exportSuffix =
+    exportScope === 'all'
+      ? ''
+      : exportScope === 'online'
+        ? '-online'
+        : exportScope === 'paper_import'
+          ? '-paper-import'
+          : '-filtered'
+
   const exportCsv = useCallback(() => {
-    const csv = buildStudentsCsv(filtered)
-    const name = studentsFileName()
+    if (exportRows.length === 0) return
+    const csv = buildStudentsCsv(exportRows)
+    const range =
+      exportFrom && exportTo
+        ? `_${exportFrom}_to_${exportTo}`
+        : exportFrom
+          ? `_from_${exportFrom}`
+          : exportTo
+            ? `_until_${exportTo}`
+            : ''
+    const name = studentsFileName(exportSuffix + range)
     if (IS_NATIVE) {
       void (async () => {
         try {
@@ -1335,7 +1446,7 @@ function AdminApp({
       a.remove()
       URL.revokeObjectURL(url)
     }
-  }, [filtered])
+  }, [exportRows, exportScope, exportFrom, exportTo, exportSuffix])
 
   // ---- Story filtering + pagination (independent of the candidate pipeline) ----
   const storyFiltered = useMemo(() => {
@@ -1513,16 +1624,86 @@ function AdminApp({
                   >
                     <UploadCloud size={16} />
                   </button>
-                  <button
-                    type="button"
-                    className="admin__iconbtn"
-                    onClick={exportCsv}
-                    disabled={filtered.length === 0}
-                    aria-label="Export the current list of students as a CSV file"
-                    title="Export CSV"
-                  >
-                    <Download size={16} />
-                  </button>
+                  <div className="admin__export" ref={exportRef}>
+                    <button
+                      type="button"
+                      className={`admin__iconbtn${exportOpen ? ' is-open' : ''}`}
+                      onClick={() => setExportOpen((o) => !o)}
+                      disabled={rows.length === 0}
+                      aria-label="Export students as a CSV file"
+                      aria-haspopup="true"
+                      aria-expanded={exportOpen}
+                      title="Export CSV"
+                    >
+                      <Download size={16} />
+                    </button>
+
+                    {exportOpen && (
+                      <div className="admin__filterpop admin__filterpop--right" role="dialog" aria-label="Export students">
+                        <div className="admin__filtergroup">
+                          <span className="admin__filtergroup-label">Who to include</span>
+                          <div className="admin__chips">
+                            {EXPORT_SCOPES.map((s) => (
+                              <button
+                                key={s.key}
+                                type="button"
+                                aria-pressed={exportScope === s.key}
+                                className={`admin__chip${exportScope === s.key ? ' is-active' : ''}`}
+                                onClick={() => setExportScope(s.key)}
+                              >
+                                {s.label}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+
+                        <div className="admin__filtergroup">
+                          <span className="admin__filtergroup-label">Registered between</span>
+                          <div className="admin__daterange">
+                            <input
+                              type="date"
+                              className="form__control form__control--date"
+                              value={exportFrom}
+                              max={exportTo || undefined}
+                              onChange={(e) => setExportFrom(e.target.value)}
+                              aria-label="Registered from"
+                            />
+                            <span className="admin__daterange-sep">and</span>
+                            <input
+                              type="date"
+                              className="form__control form__control--date"
+                              value={exportTo}
+                              min={exportFrom || undefined}
+                              onChange={(e) => setExportTo(e.target.value)}
+                              aria-label="Registered until"
+                            />
+                          </div>
+                          {(exportFrom || exportTo) && (
+                            <button
+                              type="button"
+                              className="admin__filterclear"
+                              onClick={() => {
+                                setExportFrom('')
+                                setExportTo('')
+                              }}
+                            >
+                              Clear date range
+                            </button>
+                          )}
+                        </div>
+
+                        <button
+                          type="button"
+                          className="btn btn--primary admin__exportgo"
+                          onClick={exportCsv}
+                          disabled={exportRows.length === 0}
+                        >
+                          <Download size={15} />
+                          Download CSV ({exportRows.length})
+                        </button>
+                      </div>
+                    )}
+                  </div>
                   <button
                     type="button"
                     className="admin__iconbtn"
@@ -1536,19 +1717,102 @@ function AdminApp({
                 </div>
               </div>
 
-              <div className="admin__chips" role="tablist" aria-label="Filter by certificate status">
-                {FILTERS.map((f) => (
-                  <button
-                    key={f.key}
-                    type="button"
-                    role="tab"
-                    aria-selected={statusFilter === f.key}
-                    className={`admin__chip${statusFilter === f.key ? ' is-active' : ''}`}
-                    onClick={() => setStatusFilter(f.key)}
-                  >
-                    {f.label}
-                  </button>
-                ))}
+              <div className="admin__filters" ref={filtersRef}>
+                <button
+                  type="button"
+                  className={`admin__filterbtn${activeFilterCount > 0 ? ' is-active' : ''}${filtersOpen ? ' is-open' : ''}`}
+                  onClick={() => setFiltersOpen((o) => !o)}
+                  aria-expanded={filtersOpen}
+                  aria-haspopup="true"
+                >
+                  <SlidersHorizontal size={15} />
+                  Filters
+                  {activeFilterCount > 0 && (
+                    <span className="admin__filterbtn-count">{activeFilterCount}</span>
+                  )}
+                </button>
+
+                {activeFilterCount > 0 && !filtersOpen && (
+                  <span className="admin__filters-summary">
+                    {statusFilter !== 'all' && (
+                      <span className="admin__filters-tag">
+                        {FILTERS.find((f) => f.key === statusFilter)?.label}
+                        <button
+                          type="button"
+                          aria-label="Clear certificate status filter"
+                          onClick={() => setStatusFilter('all')}
+                        >
+                          <X size={11} />
+                        </button>
+                      </span>
+                    )}
+                    {sourceFilter !== 'all' && (
+                      <span className="admin__filters-tag">
+                        {SOURCE_FILTERS.find((f) => f.key === sourceFilter)?.label}
+                        <button
+                          type="button"
+                          aria-label="Clear source filter"
+                          onClick={() => setSourceFilter('all')}
+                        >
+                          <X size={11} />
+                        </button>
+                      </span>
+                    )}
+                  </span>
+                )}
+
+                {filtersOpen && (
+                  <div className="admin__filterpop" role="dialog" aria-label="Student filters">
+                    <div className="admin__filtergroup">
+                      <span className="admin__filtergroup-label">Certificate status</span>
+                      <div className="admin__chips" role="tablist">
+                        {FILTERS.map((f) => (
+                          <button
+                            key={f.key}
+                            type="button"
+                            role="tab"
+                            aria-selected={statusFilter === f.key}
+                            className={`admin__chip${statusFilter === f.key ? ' is-active' : ''}`}
+                            onClick={() => setStatusFilter(f.key)}
+                          >
+                            {f.label}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    <div className="admin__filtergroup">
+                      <span className="admin__filtergroup-label">Registration source</span>
+                      <div className="admin__chips" role="tablist">
+                        {SOURCE_FILTERS.map((f) => (
+                          <button
+                            key={f.key}
+                            type="button"
+                            role="tab"
+                            aria-selected={sourceFilter === f.key}
+                            className={`admin__chip${sourceFilter === f.key ? ' is-active' : ''}`}
+                            onClick={() => setSourceFilter(f.key)}
+                          >
+                            {f.label}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    {activeFilterCount > 0 && (
+                      <button
+                        type="button"
+                        className="admin__filterclear"
+                        onClick={() => {
+                          setStatusFilter('all')
+                          setSourceFilter('all')
+                        }}
+                      >
+                        Clear all filters
+                      </button>
+                    )}
+                  </div>
+                )}
               </div>
 
               {error && (
@@ -1930,6 +2194,9 @@ function StudentRow({
           <span className="admin__student-id">
             <span className="admin__student-name">
               {row.full_name}
+              {(row.source ?? 'online') === 'online' && (
+                <span className="badge badge--info admin__photo-badge">Online</span>
+              )}
               {!row.passport_url && (
                 <span className="badge badge--warn admin__photo-badge">No photo</span>
               )}
@@ -1978,6 +2245,9 @@ function StudentCard({
         <span className="scard__body">
           <span className="scard__name">
             {row.full_name}
+            {(row.source ?? 'online') === 'online' && (
+              <span className="badge badge--info admin__photo-badge">Online</span>
+            )}
             {!row.passport_url && (
               <span className="badge badge--warn admin__photo-badge">No photo</span>
             )}

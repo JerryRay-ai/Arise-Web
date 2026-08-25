@@ -33,6 +33,10 @@ create table if not exists public.candidates (
   course              text,
   class_schedule      text,
   address             text,
+  -- Where the row came from: 'online' = self-registered through the site/app,
+  -- 'paper_import' = bulk CSV import of old paper-form records. Used by the
+  -- admin board to badge/filter the current intake.
+  source              text        not null default 'online',
   -----------------------------------------------------------------
   certificate_url     text,                                   -- null until admin issues it
   is_verified         boolean     not null default false,     -- true once certificate issued
@@ -82,6 +86,20 @@ alter table public.candidates alter column gender             set not null;
 alter table public.candidates alter column course             set not null;
 alter table public.candidates alter column class_schedule     set not null;
 alter table public.candidates alter column address            set not null;
+
+-- Source tracking: rows created before this column existed are either bulk
+-- imports (each logged in admin_audit_log as 'import_candidate') or online
+-- registrations (no audit entry). Backfill accordingly; the column default
+-- 'online' already covers anything inserted after the ALTER ran.
+alter table public.candidates add column if not exists source text not null default 'online';
+update public.candidates c
+set    source = 'paper_import'
+where  exists (
+         select 1
+         from   public.admin_audit_log a
+         where  a.action = 'import_candidate'
+         and    a.candidate_id = c.id
+       );
 
 -- Case-insensitive email lookups + fast reg-number lookups
 create unique index if not exists candidates_email_lower_idx
@@ -257,7 +275,7 @@ begin
     full_name, email, registration_number, exam_year, passport_url,
     phone, state_of_origin, lga, date_of_birth, occupation, religion,
     last_institution, marital_status, next_of_kin_name, next_of_kin_phone,
-    gender, course, class_schedule, address
+    gender, course, class_schedule, address, source
   )
   values (
     v_name, v_email, v_reg, v_year, p_passport_url,
@@ -699,7 +717,7 @@ begin
     full_name, email, registration_number, exam_year, passport_url,
     phone, state_of_origin, lga, date_of_birth, occupation, religion,
     last_institution, marital_status, next_of_kin_name, next_of_kin_phone,
-    gender, course, class_schedule, address
+    gender, course, class_schedule, address, source
   )
   values (
     v_name, v_email, v_reg, v_year, p_passport_url,
@@ -812,7 +830,7 @@ begin
     full_name, email, registration_number, exam_year, passport_url,
     phone, state_of_origin, lga, date_of_birth, occupation, religion,
     last_institution, marital_status, next_of_kin_name, next_of_kin_phone,
-    gender, course, class_schedule, address
+    gender, course, class_schedule, address, source
   )
   values (
     v_name, v_email, v_reg, v_year, null,           -- no passport on import
@@ -823,7 +841,7 @@ begin
     nullif(btrim(p_marital_status), ''), nullif(btrim(p_next_of_kin_name), ''),
     nullif(btrim(p_next_of_kin_phone), ''), nullif(btrim(p_gender), ''),
     nullif(btrim(p_course), ''), nullif(btrim(p_class_schedule), ''),
-    nullif(btrim(p_address), '')
+    nullif(btrim(p_address), ''), 'paper_import'
   )
   returning candidates.id into v_id;
 

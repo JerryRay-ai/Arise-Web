@@ -20,6 +20,9 @@ export type Candidate = {
   gender: string | null
   class_schedule: string | null
   address: string | null
+  // Where the row came from: 'online' = self-registered, 'paper_import' =
+  // bulk CSV import of old paper-form records.
+  source: string
   certificate_url: string | null
   is_verified: boolean
   issue_date: string | null

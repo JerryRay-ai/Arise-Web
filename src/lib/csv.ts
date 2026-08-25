@@ -18,6 +18,7 @@ export type StudentCsvRow = {
   stateOfOrigin: string
   maritalStatus: string
   registeredOn: string
+  source: string
 }
 
 // Builds the student export. `rows` should be the currently-visible (filtered)
@@ -34,6 +35,7 @@ export function buildStudentsCsv(rows: Candidate[]): string {
     'State of Origin',
     'Marital Status',
     'Registered On',
+    'Source',
   ]
   const lines: string[] = [header.map(csvField).join(',')]
   for (const r of rows) {
@@ -48,6 +50,7 @@ export function buildStudentsCsv(rows: Candidate[]): string {
       stateOfOrigin: r.state_of_origin ?? '',
       maritalStatus: r.marital_status ?? '',
       registeredOn: r.created_at ? new Date(r.created_at).toLocaleDateString() : '',
+      source: r.source === 'paper_import' ? 'Paper import' : 'Online',
     }
     lines.push(Object.values(row).map(csvField).join(','))
   }
@@ -55,10 +58,11 @@ export function buildStudentsCsv(rows: Candidate[]): string {
   return `\uFEFF${lines.join('\r\n')}`
 }
 
-// A safe filename for the export, e.g. arise-students-2026-08-13.csv
-export function studentsFileName(date = new Date()): string {
+// A safe filename for the export, e.g. arise-students-2026-08-13.csv or
+// arise-students-online_2026-01-01_to_2026-03-31-2026-08-13.csv
+export function studentsFileName(suffix = '', date = new Date()): string {
   const y = date.getFullYear()
   const m = String(date.getMonth() + 1).padStart(2, '0')
   const d = String(date.getDate()).padStart(2, '0')
-  return `arise-students-${y}-${m}-${d}.csv`
+  return `arise-students${suffix}-${y}-${m}-${d}.csv`
 }
