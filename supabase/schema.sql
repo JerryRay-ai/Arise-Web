@@ -108,8 +108,14 @@ create index if not exists candidates_reg_idx
   on public.candidates (registration_number);
 
 -- -------------------------------------------------------------
--- 2. Auto-generated registration numbers: ARISE/{year}/{seq}
---    A per-year counter table keeps sequences dense & unique.
+-- 2. Auto-generated registration numbers: ARISE/ICT/{year}/{token}
+--    The token is a RANDOM 5-digit number (100k space per year), so
+--    issued numbers cannot be enumerated or guessed. The verify RPC
+--    still requires the caller to know BOTH the number and the
+--    student's phone. Older sequential numbers keep working; only NEW
+--    registrations get random tokens.
+--    (reg_counters is now unused but kept so old installs don't
+--    break; it can be dropped manually.)
 -- -------------------------------------------------------------
 create table if not exists public.reg_counters (
   exam_year int primary key,
@@ -123,15 +129,32 @@ security definer
 set search_path = public
 as $$
 declare
-  v_seq int;
+  v_token    text;
+  v_reg      text;
+  i          int;
+  j          int;
 begin
-  insert into public.reg_counters (exam_year, last_seq)
-    values (p_year, 1)
-  on conflict (exam_year)
-    do update set last_seq = public.reg_counters.last_seq + 1
-  returning last_seq into v_seq;
+  -- Up to 10 attempts; with 5-digit tokens (100k space) collisions get
+  -- plausible as the year fills up, but the existence check + retry
+  -- guarantees uniqueness regardless.
+  for i in 1..10 loop
+    v_token := '';
+    for j in 1..5 loop
+      v_token := v_token || substr('0123456789', floor(random() * 10)::int + 1, 1);
+    end loop;
+    v_reg := 'ARISE/ICT/' || p_year::text || '/' || v_token;
+    exit when not exists (
+      select 1 from public.candidates where registration_number = v_reg
+    );
+  end loop;
 
-  return 'ARISE/ICT/' || p_year::text || '/' || lpad(v_seq::text, 4, '0');
+  if v_reg is null or exists (
+    select 1 from public.candidates where registration_number = v_reg
+  ) then
+    raise exception 'REG_GEN_FAILED';
+  end if;
+
+  return v_reg;
 end;
 $$;
 
@@ -323,8 +346,14 @@ security definer
 set search_path = public
 as $$
 begin
-  -- Rate limit per registration number: 30 lookups / 5 minutes.
+  -- Rate limit per registration number: 30 lookups / 5 minutes. A second,
+  -- GLOBAL cap blunts brute-force enumeration that rotates fake reg numbers
+  -- to dodge the per-number key (600 lookups / 5 min is far above any
+  -- legitimate human traffic but starves scripted guessing).
   if not public.rate_limit_try('verify:' || btrim(p_reg), 30, 300) then
+    raise exception 'RATE_LIMITED';
+  end if;
+  if not public.rate_limit_try('verify-global', 600, 300) then
     raise exception 'RATE_LIMITED';
   end if;
 
@@ -468,8 +497,12 @@ alter table public.admin_emails enable row level security;
 --   values ('staff@example.com', 'admin')
 --   on conflict (email) do nothing;
 
--- 7b. Is the current caller an allowlisted admin?
---     SECURITY DEFINER so it can read admin_emails past RLS.
+-- 7b. Is the current caller an allowlisted admin WITH a second factor?
+--     SECURITY DEFINER so it can read admin_emails past RLS. The AAL2
+--     requirement is database-side enforcement of the TOTP gate the admin
+--     portal already applies at login: even a stolen (password-only) admin
+--     session JWT is worthless here. The admin app self-enrolls TOTP before
+--     first use, so legitimate admins always present an aal2 token.
 create or replace function public.is_admin()
 returns boolean
 language sql
@@ -477,7 +510,8 @@ security definer
 set search_path = public
 stable
 as $$
-  select exists (
+  select coalesce(auth.jwt() ->> 'aal', 'aal1') = 'aal2'
+  and exists (
     select 1 from public.admin_emails
     where email = lower(coalesce(auth.email(), ''))
   );
@@ -496,7 +530,8 @@ security definer
 set search_path = public
 stable
 as $$
-  select exists (
+  select coalesce(auth.jwt() ->> 'aal', 'aal1') = 'aal2'
+  and exists (
     select 1 from public.admin_emails
     where email = lower(coalesce(auth.email(), ''))
       and admin_role = 'super-admin'

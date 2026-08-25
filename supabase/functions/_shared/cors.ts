@@ -1,16 +1,14 @@
 // Shared CORS handling for the media edge functions. Honors the
-// ALLOWED_ORIGINS secret (comma-separated browser origins) plus the local-dev
-// defaults. When ALLOWED_ORIGINS contains `*` every origin is allowed — a dev
+// ALLOWED_ORIGINS secret (comma-separated browser origins).
+//
+// Production defaults are ONLY the origins the shipped Android app needs
+// (Capacitor WebView). Plain http://localhost dev origins are NOT included
+// by default any more — while developing locally, add them yourself:
+//   supabase secrets set ALLOWED_ORIGINS=http://localhost:5173,http://127.0.0.1:5173
+// When ALLOWED_ORIGINS contains `*` every origin is allowed — a dev
 // convenience that MUST be removed before going live.
 
-const DEFAULT_ORIGINS = [
-  'http://localhost:5173',
-  'http://localhost:4173',
-  'http://127.0.0.1:5173',
-  'http://127.0.0.1:4173',
-  'https://localhost',
-  'capacitor://localhost',
-]
+const DEFAULT_ORIGINS = ['https://localhost', 'capacitor://localhost']
 
 export function cors(req: Request): Headers {
   const raw = Deno.env.get('ALLOWED_ORIGINS') ?? ''

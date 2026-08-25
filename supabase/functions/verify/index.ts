@@ -12,7 +12,9 @@
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 
-const DEFAULT_ORIGINS = ['http://localhost:5173', 'http://localhost:4173', 'http://127.0.0.1:5173', 'http://127.0.0.1:4173', 'https://localhost', 'capacitor://localhost']
+// Production defaults are ONLY the origins the shipped Android app needs.
+// Add http://localhost dev origins via ALLOWED_ORIGINS while developing.
+const DEFAULT_ORIGINS = ['https://localhost', 'capacitor://localhost']
 
 function allowedOrigins(): string[] {
   const raw = Deno.env.get('ALLOWED_ORIGINS') ?? ''
