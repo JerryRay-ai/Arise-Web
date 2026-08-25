@@ -33,4 +33,10 @@
     <!-- Permissions -->
 
     <uses-permission android:name="android.permission.INTERNET" />
+    <!-- CAMERA: used by the in-app WebView camera (getUserMedia) so photos are
+         captured without launching an external camera Intent — which aggressive
+         OEM ROMs (Xiaomi/Redmi HyperOS, etc.) would use as a cue to kill the
+         backgrounded app and force a full reload. -->
+    <uses-permission android:name="android.permission.CAMERA" />
+    <uses-feature android:name="android.hardware.camera" android:required="false" />
 </manifest>

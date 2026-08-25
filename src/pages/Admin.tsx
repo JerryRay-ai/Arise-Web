@@ -43,6 +43,7 @@ import {
   Check,
   Download,
   FileSpreadsheet,
+  Pencil,
 } from 'lucide-react'
 import { getSupabase } from '../lib/supabase'
 import PassportPicker from '../components/PassportPicker'
@@ -82,7 +83,7 @@ type StoryFilter = 'all' | 'pending' | 'approved' | 'rejected'
 type Flash = { kind: 'ok' | 'err'; text: string }
 
 const COLUMNS =
-  'id, full_name, email, registration_number, exam_year, passport_url, phone, course, date_of_birth, state_of_origin, marital_status, certificate_url, is_verified, issue_date, created_at'
+  'id, full_name, email, registration_number, exam_year, passport_url, phone, course, date_of_birth, state_of_origin, marital_status, lga, occupation, religion, last_institution, next_of_kin_name, next_of_kin_phone, gender, class_schedule, address, certificate_url, is_verified, issue_date, created_at'
 
 const PAGE_SIZE = 8
 
@@ -837,6 +838,10 @@ function AdminApp({
   }, [])
   // Signed URLs for the PRIVATE passports bucket, keyed by candidate id.
   const [photoUrls, setPhotoUrls] = useState<Record<string, string>>({})
+  // Mirror for the signing callback below: keeps its identity stable so the
+  // page-signing effect doesn't re-run every time a URL lands.
+  const photoUrlsRef = useRef(photoUrls)
+  photoUrlsRef.current = photoUrls
 
   // Alumni story moderation lives in its own state so the two views never entangle.
   const [storyRows, setStoryRows] = useState<Experience[]>([])
@@ -903,23 +908,50 @@ function AdminApp({
 
   // The object store is PRIVATE. Allowlisted admins get short-lived presigned
   // URLs for thumbnails from the admin-media Edge Function (they have no S3
-  // credentials of their own).
-  const signPhotos = useCallback(
-    async (targets: Candidate[]) => {
-      const supabase = getSupabase()
-      const next: Record<string, string> = {}
-      for (const r of targets) {
-        if (photoUrls[r.id] || !r.passport_url) continue
-        const { data } = await supabase.functions.invoke('admin-media', {
-          body: { action: 'sign', key: passportPath(r.passport_url) },
-        })
-        const url = (data as { url?: string } | null)?.url
-        if (url) next[r.id] = url
-      }
+  // credentials of their own). The whole page is signed in ONE batched call —
+  // a serial per-row round trip made thumbnails crawl in, especially on cold
+  // edge-function starts.
+  const signPhotos = useCallback(async (targets: Candidate[]) => {
+    const pending = targets.filter((r) => r.passport_url && !(r.id in photoUrlsRef.current))
+    if (!pending.length) return
+    const supabase = getSupabase()
+    const keyById = new Map(pending.map((r) => [r.id, passportPath(r.passport_url!)]))
+    const apply = (next: Record<string, string>) => {
       if (Object.keys(next).length) setPhotoUrls((prev) => ({ ...prev, ...next }))
-    },
-    [photoUrls]
-  )
+    }
+    try {
+      const { data, error } = await supabase.functions.invoke('admin-media', {
+        body: { action: 'sign_batch', keys: [...keyById.values()] },
+      })
+      const urls = (data as { urls?: Record<string, string> } | null)?.urls
+      if (!error && urls) {
+        const next: Record<string, string> = {}
+        for (const [id, key] of keyById) {
+          const url = urls[key]
+          if (url) next[id] = url
+        }
+        apply(next)
+        return
+      }
+      throw new Error('batch signing unavailable')
+    } catch {
+      // Older deployed admin-media without sign_batch: sign in parallel instead.
+      const results = await Promise.all(
+        [...keyById.entries()].map(async ([id, key]) => {
+          try {
+            const { data } = await supabase.functions.invoke('admin-media', {
+              body: { action: 'sign', key },
+            })
+            const url = (data as { url?: string } | null)?.url
+            return url ? ([id, url] as const) : null
+          } catch {
+            return null
+          }
+        })
+      )
+      apply(Object.fromEntries(results.filter((r): r is readonly [string, string] => r !== null)))
+    }
+  }, [])
 
   // ---- Alumni stories: load + moderate ---------------------------------
   // RLS returns rows only for allowlisted admins; the private phone comes
@@ -1148,6 +1180,76 @@ function AdminApp({
         return true
       } catch (err) {
         setFlash({ kind: 'err', text: err instanceof Error ? err.message : 'Could not attach passport.' })
+        return false
+      }
+    },
+    [patchRow]
+  )
+
+  // ---- Edit a student's details (typo/correction fixes). The registration
+  //      number and exam year are deliberately immutable — they're printed
+  //      on issued certificates and are half of the verification key.
+  const updateCandidate = useCallback(
+    async (
+      row: Candidate,
+      values: {
+        full_name: string
+        email: string | null
+        phone: string
+        state_of_origin: string
+        lga: string
+        date_of_birth: string
+        occupation: string
+        religion: string
+        last_institution: string
+        marital_status: string
+        next_of_kin_name: string
+        next_of_kin_phone: string
+        gender: string
+        course: string
+        class_schedule: string
+        address: string
+      }
+    ): Promise<boolean> => {
+      try {
+        const supabase = getSupabase()
+        const { error: rpcErr } = await supabase.rpc('admin_update_candidate', {
+          p_id: row.id,
+          p_full_name: values.full_name,
+          p_email: values.email,
+          p_phone: values.phone,
+          p_state_of_origin: values.state_of_origin,
+          p_lga: values.lga,
+          p_date_of_birth: values.date_of_birth || null,
+          p_occupation: values.occupation,
+          p_religion: values.religion,
+          p_last_institution: values.last_institution,
+          p_marital_status: values.marital_status,
+          p_next_of_kin_name: values.next_of_kin_name,
+          p_next_of_kin_phone: values.next_of_kin_phone,
+          p_gender: values.gender,
+          p_course: values.course,
+          p_class_schedule: values.class_schedule,
+          p_address: values.address,
+        })
+        if (rpcErr) {
+          const raw = rpcErr.message || ''
+          const code = raw.includes('NOT_ADMIN')
+            ? 'NOT_ADMIN'
+            : raw.includes('EMAIL_EXISTS')
+              ? 'EMAIL_EXISTS'
+              : raw.includes('INVALID_EMAIL')
+                ? 'INVALID_EMAIL'
+                : raw.includes('INVALID_PHONE')
+                  ? 'INVALID_PHONE'
+                  : 'UPDATE_FAILED'
+          throw new Error(updateErrorMessage(code))
+        }
+        patchRow(row.id, values)
+        setFlash({ kind: 'ok', text: `Details updated for ${values.full_name}.` })
+        return true
+      } catch (err) {
+        setFlash({ kind: 'err', text: err instanceof Error ? err.message : 'Update failed.' })
         return false
       }
     },
@@ -1722,6 +1824,7 @@ function AdminApp({
           onView={viewCertificate}
           onRevoke={revokeCertificate}
           onAttachPassport={attachPassport}
+          onUpdate={updateCandidate}
         />
       )}
     </div>
@@ -2100,6 +2203,7 @@ function StudentModal({
   onView,
   onRevoke,
   onAttachPassport,
+  onUpdate,
 }: {
   row: Candidate
   photoUrl?: string
@@ -2108,12 +2212,36 @@ function StudentModal({
   onView: (row: Candidate) => Promise<boolean>
   onRevoke: (row: Candidate) => Promise<boolean>
   onAttachPassport: (row: Candidate, file: File) => Promise<boolean>
+  onUpdate: (
+    row: Candidate,
+    values: {
+      full_name: string
+      email: string | null
+      phone: string
+      state_of_origin: string
+      lga: string
+      date_of_birth: string
+      occupation: string
+      religion: string
+      last_institution: string
+      marital_status: string
+      next_of_kin_name: string
+      next_of_kin_phone: string
+      gender: string
+      course: string
+      class_schedule: string
+      address: string
+    }
+  ) => Promise<boolean>
 }) {
   const [busy, setBusy] = useState<'idle' | 'uploading' | 'viewing' | 'revoking'>('idle')
   const [dragOver, setDragOver] = useState(false)
   const fileRef = useRef<HTMLInputElement>(null)
   const issued = isIssued(row)
   const working = busy !== 'idle'
+
+  // Edit mode swaps the read-only info grid for a correction form.
+  const [editing, setEditing] = useState(false)
 
   // Close on Escape.
   useEffect(() => {
@@ -2185,17 +2313,41 @@ function StudentModal({
         </div>
 
         <div className="modal__body">
-          <h3 className="modal__section-title">Student Information</h3>
-          <div className="modal__grid">
-            <Field icon={Hash} label="Registration Number" value={row.registration_number} />
-            <Field icon={GraduationCap} label="Enrolled Course" value={row.course} />
-            <Field icon={Cake} label="Date of Birth" value={fmtDate(row.date_of_birth)} />
-            <Field icon={Phone} label="Phone Number" value={row.phone} />
-            <Field icon={Mail} label="Email" value={row.email} />
-            <Field icon={MapPin} label="State of Origin" value={row.state_of_origin} />
-            <Field icon={CalendarDays} label="Exam Year" value={String(row.exam_year)} />
-            <Field icon={CalendarClock} label="Registration Date" value={fmtDate(row.created_at)} />
+          <div className="modal__section-head">
+            <h3 className="modal__section-title">Student Information</h3>
+            {!editing && (
+              <button
+                type="button"
+                className="btn btn--ghost btn--sm"
+                onClick={() => setEditing(true)}
+                disabled={working}
+              >
+                <Pencil size={14} /> Edit Details
+              </button>
+            )}
           </div>
+          {editing ? (
+            <EditDetailsForm
+              row={row}
+              busy={working}
+              onCancel={() => setEditing(false)}
+              onSave={async (values) => {
+                const ok = await onUpdate(row, values)
+                if (ok) setEditing(false)
+              }}
+            />
+          ) : (
+            <div className="modal__grid">
+              <Field icon={Hash} label="Registration Number" value={row.registration_number} />
+              <Field icon={GraduationCap} label="Enrolled Course" value={row.course} />
+              <Field icon={Cake} label="Date of Birth" value={fmtDate(row.date_of_birth)} />
+              <Field icon={Phone} label="Phone Number" value={row.phone} />
+              <Field icon={Mail} label="Email" value={row.email} />
+              <Field icon={MapPin} label="State of Origin" value={row.state_of_origin} />
+              <Field icon={CalendarDays} label="Exam Year" value={String(row.exam_year)} />
+              <Field icon={CalendarClock} label="Registration Date" value={fmtDate(row.created_at)} />
+            </div>
+          )}
 
           <div className="modal__section">
             <h3 className="modal__section-title">Passport Photo</h3>
@@ -2222,7 +2374,7 @@ function StudentModal({
                 <div className="certfile__meta">
                   <span className="certfile__name">No passport yet</span>
                   <span className="certfile__sub">
-                    Imported without a photo — attach one here (JPEG/PNG, ≤5MB).
+                    Imported without a photo — attach one here (JPEG/PNG, ≤1.5MB).
                   </span>
                 </div>
                 <div className="certfile__acts">
@@ -2356,6 +2508,332 @@ function Field({
         <span className="modal__field-value">{value || '—'}</span>
       </span>
     </div>
+  )
+}
+
+// ---- Edit student details (correction form) -----------------------------
+// Mirrors AddStudentModal's fields + validation, minus passport (handled
+// separately via attachPassport) and reg number / exam year (immutable —
+// they appear on issued certificates and key the verification lookup).
+type EditDetailsValues = {
+  full_name: string
+  email: string | null
+  phone: string
+  state_of_origin: string
+  lga: string
+  date_of_birth: string
+  occupation: string
+  religion: string
+  last_institution: string
+  marital_status: string
+  next_of_kin_name: string
+  next_of_kin_phone: string
+  gender: string
+  course: string
+  class_schedule: string
+  address: string
+}
+
+// Legacy rows (registered before the dropdowns existed, or CSV-imported free
+// text) may hold values that don't exactly match today's option lists. A
+// <select> whose value has no matching <option> renders blank, so inject the
+// stored value as an extra option — it then displays as-is, and picking any
+// listed option normalizes the data on save.
+function withValue(list: readonly string[], value: string): string[] {
+  const v = value.trim()
+  return v && !list.includes(v) ? [v, ...list] : [...list]
+}
+
+function EditDetailsForm({
+  row,
+  busy,
+  onCancel,
+  onSave,
+}: {
+  row: Candidate
+  busy: boolean
+  onCancel: () => void
+  onSave: (values: EditDetailsValues) => Promise<void>
+}) {
+  const [fullName, setFullName] = useState(row.full_name ?? '')
+  const [email, setEmail] = useState(row.email ?? '')
+  const [phone, setPhone] = useState(row.phone ?? '')
+  const [dob, setDob] = useState(row.date_of_birth ?? '')
+  const [occupation, setOccupation] = useState(row.occupation ?? '')
+  const [religion, setReligion] = useState(row.religion ?? '')
+  const [stateOfOrigin, setStateOfOrigin] = useState(row.state_of_origin ?? '')
+  const [lga, setLga] = useState(row.lga ?? '')
+  const [maritalStatus, setMaritalStatus] = useState(row.marital_status ?? '')
+  const [gender, setGender] = useState(row.gender ?? '')
+  const [course, setCourse] = useState(row.course ?? '')
+  const [classSchedule, setClassSchedule] = useState(row.class_schedule ?? '')
+  const [lastInstitution, setLastInstitution] = useState(row.last_institution ?? '')
+  const [nokName, setNokName] = useState(row.next_of_kin_name ?? '')
+  const [nokPhone, setNokPhone] = useState(row.next_of_kin_phone ?? '')
+  const [address, setAddress] = useState(row.address ?? '')
+  const [error, setError] = useState<string | null>(null)
+
+  async function onSubmit(e: React.FormEvent) {
+    e.preventDefault()
+    setError(null)
+
+    const name = fullName.trim()
+    const mail = email.trim().toLowerCase()
+
+    if (!isValidName(name)) return setError('Please enter the student’s full name.')
+    if (mail && !isValidEmail(mail)) return setError('Please enter a valid email address.')
+    if (!isValidPhone(phone)) return setError('Please enter a valid phone number.')
+    if (!occupation.trim()) return setError('Please enter an occupation.')
+    if (!religion) return setError('Please select a religion.')
+    if (!stateOfOrigin) return setError('Please select the state of origin.')
+    if (!lga) return setError('Please select the LGA.')
+    if (!dob) return setError('Please select a date of birth.')
+    if (!lastInstitution.trim()) return setError('Please enter the last institution.')
+    if (!maritalStatus) return setError('Please select a marital status.')
+    if (!gender) return setError('Please select a gender.')
+    if (!course) return setError('Please select a course.')
+    if (!classSchedule) return setError('Please select a class schedule.')
+    if (!nokName.trim()) return setError('Please enter the next of kin name.')
+    if (!nokPhone.trim()) return setError('Please enter the next of kin phone.')
+    if (!address.trim()) return setError('Please enter the address.')
+
+    await onSave({
+      full_name: name,
+      email: mail || null,
+      phone: phone.trim(),
+      state_of_origin: stateOfOrigin,
+      lga,
+      date_of_birth: dob,
+      occupation: occupation.trim(),
+      religion,
+      last_institution: lastInstitution.trim(),
+      marital_status: maritalStatus,
+      next_of_kin_name: nokName.trim(),
+      next_of_kin_phone: nokPhone.trim(),
+      gender,
+      course,
+      class_schedule: classSchedule,
+      address: address.trim(),
+    })
+  }
+
+  return (
+    <form className="addform" onSubmit={onSubmit} noValidate>
+      {error && (
+        <div className="notice notice--error" role="alert">
+          {error}
+        </div>
+      )}
+
+      <div className="addform__grid">
+        <div className="form__row">
+          <label className="form__label" htmlFor={`es_name-${row.id}`}>Full Name</label>
+          <input
+            id={`es_name-${row.id}`} className="form__control" type="text"
+            value={fullName} onChange={(e) => setFullName(e.target.value)}
+            autoComplete="off" required
+          />
+        </div>
+
+        <div className="form__row">
+          <label className="form__label" htmlFor={`es_phone-${row.id}`}>Phone Number</label>
+          <input
+            id={`es_phone-${row.id}`} className="form__control" type="tel"
+            value={phone} onChange={(e) => setPhone(e.target.value)}
+            autoComplete="off" required
+          />
+        </div>
+
+        <div className="form__row">
+          <label className="form__label" htmlFor={`es_email-${row.id}`}>
+            Email <span className="form__opt">(optional)</span>
+          </label>
+          <input
+            id={`es_email-${row.id}`} className="form__control" type="email"
+            value={email} onChange={(e) => setEmail(e.target.value)}
+            autoComplete="off"
+          />
+        </div>
+
+        <div className="form__row">
+          <label className="form__label" htmlFor={`es_dob-${row.id}`}>Date of Birth</label>
+          <input
+            id={`es_dob-${row.id}`} className="form__control" type="date"
+            value={dob} onChange={(e) => setDob(e.target.value)}
+            required
+          />
+        </div>
+
+        <div className="form__row">
+          <label className="form__label" htmlFor={`es_course-${row.id}`}>Course</label>
+          <select
+            id={`es_course-${row.id}`} className="form__control form__control--select"
+            value={course} onChange={(e) => setCourse(e.target.value)}
+            required
+          >
+            <option value="">Select…</option>
+            {withValue(COURSES.map((c) => c.trim()), course).map((c) => (
+              <option key={c} value={c}>{c}</option>
+            ))}
+          </select>
+        </div>
+
+        <div className="form__row">
+          <label className="form__label" htmlFor={`es_schedule-${row.id}`}>Class Schedule</label>
+          <select
+            id={`es_schedule-${row.id}`} className="form__control form__control--select"
+            value={classSchedule} onChange={(e) => setClassSchedule(e.target.value)}
+            required
+          >
+            <option value="">Select…</option>
+            {withValue(CLASS_SCHEDULES, classSchedule).map((s) => (
+              <option key={s} value={s}>{s}</option>
+            ))}
+          </select>
+        </div>
+
+        <div className="form__row">
+          <label className="form__label" htmlFor={`es_occupation-${row.id}`}>Occupation</label>
+          <input
+            id={`es_occupation-${row.id}`} className="form__control" type="text"
+            value={occupation} onChange={(e) => setOccupation(e.target.value)}
+            required
+          />
+        </div>
+
+        <div className="form__row">
+          <label className="form__label" htmlFor={`es_religion-${row.id}`}>Religion</label>
+          <select
+            id={`es_religion-${row.id}`} className="form__control form__control--select"
+            value={religion} onChange={(e) => setReligion(e.target.value)}
+            required
+          >
+            <option value="">Select…</option>
+            {withValue(RELIGIONS, religion).map((r) => (
+              <option key={r} value={r}>{r}</option>
+            ))}
+          </select>
+        </div>
+
+        <div className="form__row">
+          <label className="form__label" htmlFor={`es_state-${row.id}`}>State of Origin</label>
+          <select
+            id={`es_state-${row.id}`} className="form__control form__control--select"
+            value={stateOfOrigin} onChange={(e) => {
+              setStateOfOrigin(e.target.value)
+              setLga('')
+            }}
+            required
+          >
+            <option value="">Select…</option>
+            {withValue(NIGERIA_STATES.map((s) => s.name), stateOfOrigin).map((s) => (
+              <option key={s} value={s}>{s}</option>
+            ))}
+          </select>
+        </div>
+
+        <div className="form__row">
+          <label className="form__label" htmlFor={`es_lga-${row.id}`}>LGA</label>
+          <select
+            id={`es_lga-${row.id}`} className="form__control form__control--select"
+            value={lga} onChange={(e) => setLga(e.target.value)}
+            disabled={!stateOfOrigin}
+            required
+          >
+            <option value="">{stateOfOrigin ? 'Select…' : 'Select your state first'}</option>
+            {withValue(getLgas(stateOfOrigin), lga).map((l) => (
+              <option key={l} value={l}>{l}</option>
+            ))}
+          </select>
+        </div>
+
+        <div className="form__row">
+          <label className="form__label" htmlFor={`es_marital-${row.id}`}>Marital Status</label>
+          <select
+            id={`es_marital-${row.id}`} className="form__control form__control--select"
+            value={maritalStatus} onChange={(e) => setMaritalStatus(e.target.value)}
+            required
+          >
+            <option value="">Select…</option>
+            {withValue(MARITAL_STATUSES, maritalStatus).map((m) => (
+              <option key={m} value={m}>{m}</option>
+            ))}
+          </select>
+        </div>
+
+        <div className="form__row">
+          <label className="form__label" htmlFor={`es_gender-${row.id}`}>Gender</label>
+          <select
+            id={`es_gender-${row.id}`} className="form__control form__control--select"
+            value={gender} onChange={(e) => setGender(e.target.value)}
+            required
+          >
+            <option value="">Select…</option>
+            {withValue(GENDERS, gender).map((g) => (
+              <option key={g} value={g}>{g}</option>
+            ))}
+          </select>
+        </div>
+
+        <div className="form__row">
+          <label className="form__label" htmlFor={`es_last-${row.id}`}>Last Institution</label>
+          <input
+            id={`es_last-${row.id}`} className="form__control" type="text"
+            value={lastInstitution} onChange={(e) => setLastInstitution(e.target.value)}
+            required
+          />
+        </div>
+
+        <div className="form__row">
+          <label className="form__label" htmlFor={`es_nok-${row.id}`}>Next of Kin</label>
+          <input
+            id={`es_nok-${row.id}`} className="form__control" type="text"
+            value={nokName} onChange={(e) => setNokName(e.target.value)}
+            required
+          />
+        </div>
+
+        <div className="form__row">
+          <label className="form__label" htmlFor={`es_nokphone-${row.id}`}>Next of Kin Phone</label>
+          <input
+            id={`es_nokphone-${row.id}`} className="form__control" type="tel"
+            value={nokPhone} onChange={(e) => setNokPhone(e.target.value)}
+            required
+          />
+        </div>
+
+        <div className="form__row addform__full">
+          <label className="form__label" htmlFor={`es_address-${row.id}`}>Address</label>
+          <textarea
+            id={`es_address-${row.id}`} className="form__control form__control--area" rows={2}
+            value={address} onChange={(e) => setAddress(e.target.value)}
+            required
+          />
+        </div>
+      </div>
+
+      <p className="admin__settings-note">
+        The registration number ({row.registration_number}) and exam year can&rsquo;t be changed —
+        they appear on issued certificates and are used for verification.
+      </p>
+
+      <div className="modal__foot">
+        <button type="button" className="btn btn--ghost" onClick={onCancel} disabled={busy}>
+          Cancel
+        </button>
+        <button type="submit" className="btn btn--green" disabled={busy}>
+          {busy ? (
+            <>
+              <Loader2 className="spin" size={16} /> Saving…
+            </>
+          ) : (
+            <>
+              <Check size={16} /> Save Changes
+            </>
+          )}
+        </button>
+      </div>
+    </form>
   )
 }
 
@@ -2955,6 +3433,21 @@ function addErrorMessage(code: string): string {
   return registerErrorMessage(code)
 }
 
+function updateErrorMessage(code: string): string {
+  switch (code) {
+    case 'NOT_ADMIN':
+      return 'Your account is not authorised to edit students.'
+    case 'EMAIL_EXISTS':
+      return 'That email is already registered to another student.'
+    case 'INVALID_EMAIL':
+      return 'Please enter a valid email address.'
+    case 'INVALID_PHONE':
+      return 'Please enter a valid phone number.'
+    default:
+      return 'Could not save the changes. Please try again.'
+  }
+}
+
 // ---- Add a manually-registered student ---------------------------------
 // Creates the candidate row via the admin-only RPC, then hands the new id
 // back so the parent can open its profile and attach the certificate.
@@ -3011,6 +3504,11 @@ function AddStudentModal({
 
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  // Set when the form was rehydrated from localStorage after the app was
+  // restarted mid-entry (Android killing the WebView while the camera was
+  // open) so we can tell the admin what happened instead of it feeling
+  // like a mysterious crash.
+  const [restored, setRestored] = useState(false)
 
   // Closing the modal abandons the in-progress form, so clear its draft.
   const close = () => {
@@ -3032,6 +3530,7 @@ function AddStudentModal({
   useEffect(() => {
     const d = loadDraft<AddStudentDraft>(DRAFT_KEY)
     if (!d) return
+    setRestored(true)
     setFullName(d.fullName ?? '')
     setEmail(d.email ?? '')
     setPhone(d.phone ?? '')
@@ -3060,18 +3559,38 @@ function AddStudentModal({
 
   // Auto-save the whole form (fields + photo) as a debounced draft so any
   // reload — the slow-device camera kill included — is lossless.
+  const formDraft = {
+    fullName, email, phone, year, course, dob, stateOfOrigin, lga,
+    occupation, religion, maritalStatus, gender, classSchedule,
+    lastInstitution, nokName, nokPhone, address, photoDataUrl,
+  }
+  // Latest snapshot for the synchronous flush below (the debounced effect's
+  // closure would go stale between keystrokes).
+  const draftRef = useRef(formDraft)
+  draftRef.current = formDraft
+
   useEffect(() => {
     const t = setTimeout(() => {
-      saveDraft(DRAFT_KEY, {
-        fullName, email, phone, year, course, dob, stateOfOrigin, lga,
-        occupation, religion, maritalStatus, gender, classSchedule,
-        lastInstitution, nokName, nokPhone, address, photoDataUrl,
-      })
+      saveDraft(DRAFT_KEY, formDraft)
     }, 400)
     return () => clearTimeout(t)
-  }, [fullName, email, phone, year, course, dob, stateOfOrigin, lga,
-      occupation, religion, maritalStatus, gender, classSchedule,
-      lastInstitution, nokName, nokPhone, address, photoDataUrl])
+  }, [formDraft])
+
+  // Android may destroy the activity outright while the native camera is in
+  // the foreground; the 400ms debounce would lose anything typed just before
+  // the trip. Flush synchronously the moment the app is sent to background.
+  useEffect(() => {
+    const flush = () => saveDraft(DRAFT_KEY, draftRef.current)
+    const onVis = () => {
+      if (document.visibilityState === 'hidden') flush()
+    }
+    window.addEventListener('pagehide', flush)
+    document.addEventListener('visibilitychange', onVis)
+    return () => {
+      window.removeEventListener('pagehide', flush)
+      document.removeEventListener('visibilitychange', onVis)
+    }
+  }, [])
 
   // Release the object URL when it changes or the modal unmounts.
   useEffect(() => {
@@ -3234,6 +3753,12 @@ function AddStudentModal({
         </div>
 
         <form className="addform" onSubmit={onSubmit} noValidate>
+          {restored && (
+            <div className="notice notice--info" role="status">
+              We picked up where you left off after the app restarted. Your entries were saved —
+              only the passport photo needs to be taken again.
+            </div>
+          )}
           {error && (
             <div className="notice notice--error" role="alert">
               {error}

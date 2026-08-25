@@ -11,6 +11,15 @@ export type Candidate = {
   date_of_birth: string | null
   state_of_origin: string | null
   marital_status: string | null
+  lga: string | null
+  occupation: string | null
+  religion: string | null
+  last_institution: string | null
+  next_of_kin_name: string | null
+  next_of_kin_phone: string | null
+  gender: string | null
+  class_schedule: string | null
+  address: string | null
   certificate_url: string | null
   is_verified: boolean
   issue_date: string | null
@@ -23,7 +32,7 @@ export type VerifiedProfile = {
   full_name: string
   registration_number: string
   passport_url: string | null
-  marital_status: string | null
+  address: string | null
   state_of_origin: string | null
   course: string | null
   age: number | null

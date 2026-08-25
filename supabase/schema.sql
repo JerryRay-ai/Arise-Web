@@ -62,12 +62,26 @@ alter table public.candidates add column if not exists course            text;
 alter table public.candidates add column if not exists class_schedule    text;
 alter table public.candidates add column if not exists address           text;
 
--- Occupation & religion are required. Backfill any legacy rows first so the
--- NOT NULL constraint applies cleanly on existing installs (re-run safe).
+-- TEMP-IMPORT revert: all registration fields are NOT NULL again (only email
+-- is optional, and passport_url stays nullable for bulk imports). The UPDATEs
+-- below backfill placeholders so SET NOT NULL won't fail on rows that were
+-- imported without those values.
 update public.candidates set occupation = 'Unknown' where occupation is null;
-update public.candidates set religion   = 'Other'   where religion   is null;
+update public.candidates set religion   = 'Other'   where religion is null;
 alter table public.candidates alter column occupation set not null;
 alter table public.candidates alter column religion   set not null;
+alter table public.candidates alter column phone              set not null;
+alter table public.candidates alter column state_of_origin    set not null;
+alter table public.candidates alter column lga                set not null;
+alter table public.candidates alter column date_of_birth      set not null;
+alter table public.candidates alter column last_institution   set not null;
+alter table public.candidates alter column marital_status     set not null;
+alter table public.candidates alter column next_of_kin_name   set not null;
+alter table public.candidates alter column next_of_kin_phone  set not null;
+alter table public.candidates alter column gender             set not null;
+alter table public.candidates alter column course             set not null;
+alter table public.candidates alter column class_schedule     set not null;
+alter table public.candidates alter column address            set not null;
 
 -- Case-insensitive email lookups + fast reg-number lookups
 create unique index if not exists candidates_email_lower_idx
@@ -278,7 +292,7 @@ returns table (
   full_name           text,
   registration_number text,
   passport_url        text,
-  marital_status      text,
+  address             text,
   state_of_origin     text,
   course              text,
   age                 int,
@@ -301,7 +315,7 @@ begin
     c.full_name,
     c.registration_number,
     c.passport_url,
-    c.marital_status,
+    c.address,
     c.state_of_origin,
     c.course,
     case
@@ -757,7 +771,8 @@ begin
     raise exception 'NOT_ADMIN';
   end if;
 
-  -- Same server-side validation as the manual add path.
+  -- Same validation as admin_add_candidate: phone is required (verify_candidate
+  -- keys on reg number + phone) and every field except email must be present.
   if v_name is null or char_length(v_name) < 2 then
     raise exception 'INVALID_NAME';
   end if;
@@ -767,12 +782,8 @@ begin
   if v_phone is null or char_length(regexp_replace(v_phone, '\D', '', 'g')) < 7 then
     raise exception 'INVALID_PHONE';
   end if;
-  if v_occupation is null then
-    raise exception 'INVALID_OCCUPATION';
-  end if;
-  if v_religion is null then
-    raise exception 'INVALID_RELIGION';
-  end if;
+  if v_occupation is null then raise exception 'INVALID_OCCUPATION'; end if;
+  if v_religion is null then raise exception 'INVALID_RELIGION'; end if;
   if nullif(btrim(p_state_of_origin), '') is null
      or nullif(btrim(p_lga), '') is null
      or p_date_of_birth is null
@@ -805,13 +816,14 @@ begin
   )
   values (
     v_name, v_email, v_reg, v_year, null,           -- no passport on import
-    v_phone, btrim(p_state_of_origin), btrim(p_lga),
+    -- TEMP-IMPORT: nullif() so blank CSV cells store as NULL, not ''
+    nullif(v_phone, ''), nullif(btrim(p_state_of_origin), ''), nullif(btrim(p_lga), ''),
     p_date_of_birth, v_occupation, v_religion,
-    btrim(p_last_institution),
-    btrim(p_marital_status), btrim(p_next_of_kin_name),
-    btrim(p_next_of_kin_phone), btrim(p_gender),
-    btrim(p_course), btrim(p_class_schedule),
-    btrim(p_address)
+    nullif(btrim(p_last_institution), ''),
+    nullif(btrim(p_marital_status), ''), nullif(btrim(p_next_of_kin_name), ''),
+    nullif(btrim(p_next_of_kin_phone), ''), nullif(btrim(p_gender), ''),
+    nullif(btrim(p_course), ''), nullif(btrim(p_class_schedule), ''),
+    nullif(btrim(p_address), '')
   )
   returning candidates.id into v_id;
 
@@ -865,6 +877,123 @@ begin
 end;
 $$;
 grant execute on function public.admin_set_passport(uuid, text) to authenticated;
+
+
+-- -------------------------------------------------------------
+-- 7d. Edit a student's details after registration (fix typos,
+--     corrections). The registration number and exam year are
+--     intentionally NOT editable: they are printed on issued
+--     certificates and are half of the student's verification
+--     key (verify_candidate matches reg number + phone). Same
+--     validation as admin_add_candidate, but the email-uniqueness
+--     check must exclude the row being edited.
+-- -------------------------------------------------------------
+create or replace function public.admin_update_candidate(
+  p_id                uuid,
+  p_full_name         text,
+  p_email             text,
+  p_phone             text,
+  p_state_of_origin   text,
+  p_lga               text,
+  p_date_of_birth     date,
+  p_occupation        text,
+  p_religion          text,
+  p_last_institution  text,
+  p_marital_status    text,
+  p_next_of_kin_name  text,
+  p_next_of_kin_phone text,
+  p_gender            text,
+  p_course            text,
+  p_class_schedule    text,
+  p_address           text
+)
+returns void
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_name       text := btrim(p_full_name);
+  v_email      text := nullif(lower(btrim(p_email)), '');
+  v_phone      text := btrim(p_phone);
+  v_occupation text := nullif(btrim(p_occupation), '');
+  v_religion   text := nullif(btrim(p_religion), '');
+begin
+  if not public.is_admin() then
+    raise exception 'NOT_ADMIN';
+  end if;
+
+  -- Same server-side validation as admin_add_candidate (never trust client).
+  if v_name is null or char_length(v_name) < 2 then
+    raise exception 'INVALID_NAME';
+  end if;
+  if v_email is not null and v_email !~ '^[^@\s]+@[^@\s]+\.[^@\s]+$' then
+    raise exception 'INVALID_EMAIL';
+  end if;
+  if v_phone is null or char_length(regexp_replace(v_phone, '\D', '', 'g')) < 7 then
+    raise exception 'INVALID_PHONE';
+  end if;
+  if v_occupation is null then
+    raise exception 'INVALID_OCCUPATION';
+  end if;
+  if v_religion is null then
+    raise exception 'INVALID_RELIGION';
+  end if;
+  if nullif(btrim(p_state_of_origin), '') is null
+     or nullif(btrim(p_lga), '') is null
+     or p_date_of_birth is null
+     or nullif(btrim(p_last_institution), '') is null
+     or nullif(btrim(p_marital_status), '') is null
+     or nullif(btrim(p_next_of_kin_name), '') is null
+     or nullif(btrim(p_next_of_kin_phone), '') is null
+     or nullif(btrim(p_gender), '') is null
+     or nullif(btrim(p_course), '') is null
+     or nullif(btrim(p_class_schedule), '') is null
+     or nullif(btrim(p_address), '') is null then
+    raise exception 'MISSING_FIELD';
+  end if;
+
+  -- Unique email, but a student may keep their own address.
+  if v_email is not null
+     and exists (
+       select 1 from public.candidates
+        where lower(email) = v_email
+          and id <> p_id
+     ) then
+    raise exception 'EMAIL_EXISTS';
+  end if;
+
+  update public.candidates
+     set full_name         = v_name,
+         email             = v_email,
+         phone             = v_phone,
+         state_of_origin   = btrim(p_state_of_origin),
+         lga               = btrim(p_lga),
+         date_of_birth     = p_date_of_birth,
+         occupation        = v_occupation,
+         religion          = v_religion,
+         last_institution  = btrim(p_last_institution),
+         marital_status    = btrim(p_marital_status),
+         next_of_kin_name  = btrim(p_next_of_kin_name),
+         next_of_kin_phone = btrim(p_next_of_kin_phone),
+         gender            = btrim(p_gender),
+         course            = btrim(p_course),
+         class_schedule    = btrim(p_class_schedule),
+         address           = btrim(p_address)
+   where id = p_id;
+
+  if not found then
+    raise exception 'NOT_FOUND';
+  end if;
+
+  insert into public.admin_audit_log (admin_email, action, candidate_id, detail)
+  values (lower(coalesce(auth.email(), '')), 'update_candidate', p_id, v_name);
+end;
+$$;
+grant execute on function public.admin_update_candidate(
+  uuid, text, text, text, text, text, date, text, text, text,
+  text, text, text, text, text, text, text
+) to authenticated;
 
 
 -- =============================================================

@@ -191,8 +191,8 @@ export default function Verify() {
                   <dd>{profile.age != null ? `${profile.age} Years` : '—'}</dd>
                 </div>
                 <div className="profile__item">
-                  <dt>Marital Status</dt>
-                  <dd>{profile.marital_status ?? '—'}</dd>
+                  <dt>Address</dt>
+                  <dd>{profile.address ?? '—'}</dd>
                 </div>
                 <div className="profile__item">
                   <dt>State of Origin</dt>

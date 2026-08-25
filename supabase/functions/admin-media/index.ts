@@ -6,6 +6,7 @@
 // objects on revoke.
 //
 //   { "action": "sign",       "key": "<object-key>" }            -> { url }
+//   { "action": "sign_batch", "keys": ["<key>", ...] }            -> { urls: { key: url } }
 //   { "action": "sign_cert",  "key": "<object-key>",
 //                              "download": "name.pdf" }          -> { url }
 //   { "action": "delete",     "key": "<object-key>" }            -> { ok }
@@ -61,6 +62,25 @@ Deno.serve(async (req) => {
       return json(headers, { url, expires_in: SIGNED_URL_TTL })
     } catch {
       return json(headers, { error: 'Could not sign the file' }, 500)
+    }
+  }
+
+  // Sign a whole page of passport thumbnails in one round trip — the admin
+  // board signs up to PAGE_SIZE photos at a time and a serial per-row call
+  // made thumbnails crawl in on cold starts.
+  if (action === 'sign_batch') {
+    const keys = Array.isArray(body.keys)
+      ? [...new Set(body.keys.map((k) => String(k ?? '').trim()).filter(Boolean))]
+      : []
+    if (!keys.length) return json(headers, { error: 'keys is required' }, 400)
+    if (keys.length > 50) return json(headers, { error: 'Too many keys (max 50)' }, 400)
+    try {
+      const entries = await Promise.all(
+        keys.map(async (k) => [k, await presignGet(k, SIGNED_URL_TTL)] as const)
+      )
+      return json(headers, { urls: Object.fromEntries(entries), expires_in: SIGNED_URL_TTL })
+    } catch {
+      return json(headers, { error: 'Could not sign the files' }, 500)
     }
   }
 

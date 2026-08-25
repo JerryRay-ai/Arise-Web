@@ -583,7 +583,8 @@ export default function Register() {
           <button
             className="btn btn--primary regform__submit"
             type="submit"
-            disabled={status === 'submitting'}
+            disabled={status === 'submitting' || !passport}
+            title={!passport ? 'Attach your passport photo to submit' : undefined}
           >
             {status === 'submitting' ? (
               <>
