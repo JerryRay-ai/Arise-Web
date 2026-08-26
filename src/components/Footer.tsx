@@ -50,7 +50,7 @@ export default function Footer() {
 
         <div className="footer__col">
           <h4 className="footer__title">Connect</h4>
-          <a className="footer__social" href="#" aria-label="Facebook">
+          <a className="footer__social" href="https://www.facebook.com/p/Arise-ICT-HUB-61586058206132/" aria-label="Facebook">
             <Facebook size={18} strokeWidth={2} />
           </a>
         </div>

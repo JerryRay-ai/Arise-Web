@@ -39,9 +39,7 @@ export default function Header() {
       <div className="header__inner container">
         <Link className="header__brand" to="/" onClick={close} aria-label="ARISE ICT HUB — home">
           <img src="/assets/logo.png" alt="" />
-          <span className="header__brand-text">ICT Hub</span>
         </Link>
-
         <button
           type="button"
           className="header__toggle"
