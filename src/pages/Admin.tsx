@@ -2644,7 +2644,7 @@ function StudentModal({
                 <div className="certfile__meta">
                   <span className="certfile__name">No passport yet</span>
                   <span className="certfile__sub">
-                    Imported without a photo — attach one here (JPEG/PNG, ≤1.5MB).
+                    Imported without a photo — attach one here (JPEG/PNG, ≤3MB).
                   </span>
                 </div>
                 <div className="certfile__acts">

@@ -1,4 +1,4 @@
-export const PASSPORT_MAX_BYTES = (3 * 1024 * 1024) / 2 // 1.5 MB
+export const PASSPORT_MAX_BYTES = 3 * 1024 * 1024 // 3 MB
 export const PASSPORT_TYPES = ['image/jpeg', 'image/png'] as const
 
 // Certificates the admin uploads: PDF only, up to 5 MB.
@@ -43,7 +43,7 @@ export function passportError(file: File): string | null {
     return 'Passport must be a JPEG or PNG image.'
   }
   if (file.size > PASSPORT_MAX_BYTES) {
-    return 'Passport photo must be 1.5MB or smaller.'
+    return 'Passport photo must be 3MB or smaller.'
   }
   return null
 }

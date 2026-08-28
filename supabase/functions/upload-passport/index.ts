@@ -17,7 +17,7 @@
 import { cors, json } from '../_shared/cors.ts'
 import { putObject } from '../_shared/s3.ts'
 
-const MAX_BYTES = (3 * 1024 * 1024) / 2 // 1.5 MB — mirrors PASSPORT_MAX_BYTES client-side
+const MAX_BYTES = 3 * 1024 * 1024 // 3 MB — mirrors PASSPORT_MAX_BYTES client-side
 
 function isJpeg(bytes: Uint8Array): boolean {
   return bytes.length >= 3 && bytes[0] === 0xff && bytes[1] === 0xd8 && bytes[2] === 0xff
@@ -49,7 +49,7 @@ Deno.serve(async (req) => {
     return json(headers, { error: 'A photo file is required' }, 400)
   }
   if (file.size <= 0 || file.size > MAX_BYTES) {
-    return json(headers, { error: 'Photo must be JPEG or PNG and no larger than 1.5MB' }, 400)
+    return json(headers, { error: 'Photo must be JPEG or PNG and no larger than 3MB' }, 400)
   }
 
   const mime = file.type === 'image/jpeg' || file.type === 'image/png' ? file.type : ''
