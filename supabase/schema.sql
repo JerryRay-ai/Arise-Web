@@ -1287,13 +1287,13 @@ $$;
 grant execute on function public.dismiss_security_alert(uuid) to authenticated;
 
 -- =============================================================
--- 11. Close the direct RPC holes now that hCaptcha-gated proxies exist.
+-- 11. Close the direct RPC holes now that proxies exist.
 --     register_candidate, verify_candidate and submit_experience are only
 --     reachable through the `register` / `verify` / `share-story` Edge
---     Functions (which verify the CAPTCHA token server-side). Postgres
---     grants EXECUTE to PUBLIC by default, so revoking from anon/authenticated
---     alone isn't enough — revoke from PUBLIC and hand execute back to the
---     service-role key the Edge Functions use (browser roles lose it entirely).
+--     Functions. Postgres grants EXECUTE to PUBLIC by default, so revoking
+--     from anon/authenticated alone isn't enough — revoke from PUBLIC and
+--     hand execute back to the service-role key the Edge Functions use
+--     (browser roles lose it entirely).
 -- =============================================================
 revoke execute on function public.register_candidate(
   text, text, text, text, text, date, text, text, text, text,

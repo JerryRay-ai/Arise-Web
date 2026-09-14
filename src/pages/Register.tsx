@@ -1,6 +1,5 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
-import HCaptcha from '@hcaptcha/react-hcaptcha'
 import { CheckCircle2, ArrowLeft, Loader2, Copy, Check, X } from 'lucide-react'
 import PassportPicker from '../components/PassportPicker'
 import { getSupabase } from '../lib/supabase'
@@ -69,15 +68,6 @@ export default function Register() {
   const [error, setError] = useState<string | null>(null)
   const [regNumber, setRegNumber] = useState<string | null>(null)
   const [copied, setCopied] = useState(false)
-  const [captchaToken, setCaptchaToken] = useState('')
-
-  const captchaRef = useRef<HCaptcha | null>(null)
-  const hcaptchaSitekey = import.meta.env.VITE_HCAPTCHA_SITEKEY ?? ''
-
-  function resetCaptcha() {
-    captchaRef.current?.resetCaptcha()
-    setCaptchaToken('')
-  }
 
   function onPickFile(file: File | null) {
     setError(null)
@@ -184,7 +174,6 @@ export default function Register() {
     if (!passport) return setError('Please attach your passport photo.')
     const pErr = passportError(passport)
     if (pErr) return setError(pErr)
-    if (!captchaToken) return setError('Please complete the CAPTCHA to prove you are human.')
 
     setStatus('submitting')
     try {
@@ -217,9 +206,7 @@ export default function Register() {
       const path = (upData as { path?: string } | null)?.path
       if (!path) throw new Error('Passport upload failed. Please try again.')
 
-      // 2. Register through the `register` Edge Function, which verifies the
-      //    CAPTCHA token server-side BEFORE invoking the hardened RPC. The
-      //    anon key can no longer create candidates on its own.
+      // 2. Register through the `register` Edge Function, which invokes the hardened RPC.
       const { data, error: fnErr } = await supabase.functions.invoke('register', {
         body: {
           full_name: name,
@@ -239,7 +226,6 @@ export default function Register() {
           class_schedule: schedule,
           address: address.trim(),
           passport_url: path,
-          captcha_token: captchaToken,
         },
       })
 
@@ -255,7 +241,6 @@ export default function Register() {
             /* body wasn't JSON */
           }
         }
-        resetCaptcha()
         throw new Error(registerErrorMessage(registerErrorCode(detail)))
       }
 
@@ -346,7 +331,7 @@ export default function Register() {
 
           {restored && (
             <div className="notice notice--info" role="status">
-              We restored your saved form. Review your details and complete the CAPTCHA to submit.
+              We restored your saved form. Review your details to submit.
             </div>
           )}
 
@@ -558,26 +543,6 @@ export default function Register() {
               </div>
             ) : null}
             <PassportPicker onFile={onPickFile} />
-          </div>
-
-          <div className="form__row captcha-row">
-            <span className="form__label">Security Check</span>
-            {hcaptchaSitekey ? (
-              <HCaptcha
-                ref={captchaRef}
-                sitekey={hcaptchaSitekey}
-                onVerify={(token) => setCaptchaToken(token)}
-                onExpire={() => setCaptchaToken('')}
-                onError={() => {
-                  setCaptchaToken('')
-                  setError('The security check could not be loaded. Please refresh and try again.')
-                }}
-              />
-            ) : (
-              <p className="form__hint">
-                Security check unavailable. Please set <code>VITE_HCAPTCHA_SITEKEY</code> to register.
-              </p>
-            )}
           </div>
 
           <button

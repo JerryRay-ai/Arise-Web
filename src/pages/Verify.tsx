@@ -1,6 +1,5 @@
-import { useRef, useState } from 'react'
+import { useState } from 'react'
 import { Link } from 'react-router-dom'
-import HCaptcha from '@hcaptcha/react-hcaptcha'
 import { Search, Loader2, ShieldCheck, Download, RotateCcw } from 'lucide-react'
 import { getSupabase } from '../lib/supabase'
 import { isValidPhone, verifyErrorCode, verifyErrorMessage } from '../lib/validation'
@@ -11,19 +10,10 @@ type Status = 'idle' | 'searching' | 'downloading'
 export default function Verify() {
   const [reg, setReg] = useState('')
   const [phone, setPhone] = useState('')
-  const [captchaToken, setCaptchaToken] = useState('')
   const [status, setStatus] = useState<Status>('idle')
   const [error, setError] = useState<string | null>(null)
   const [profile, setProfile] = useState<VerifiedProfile | null>(null)
   const [photoUrl, setPhotoUrl] = useState<string | null>(null)
-
-  const captchaRef = useRef<HCaptcha | null>(null)
-  const hcaptchaSitekey = import.meta.env.VITE_HCAPTCHA_SITEKEY ?? ''
-
-  function resetCaptcha() {
-    captchaRef.current?.resetCaptcha()
-    setCaptchaToken('')
-  }
 
   // After a successful two-factor lookup, ask the `passport` Edge Function
   // (which re-verifies the same credentials) for a short-lived signed URL to
@@ -51,18 +41,15 @@ export default function Verify() {
     const regNo = reg.trim()
     if (regNo.length < 3) return setError('Enter your student registration number.')
     if (!isValidPhone(phone)) return setError('Enter the phone number you registered with.')
-    if (!captchaToken) return setError('Please complete the CAPTCHA to prove you are human.')
 
     setStatus('searching')
     try {
       const supabase = getSupabase()
-      // The lookup runs through the `verify` Edge Function, which validates the
-      // CAPTCHA token server-side before calling the two-factor RPC.
+      // The lookup runs through the `verify` Edge Function, which calls the two-factor RPC.
       const { data, error: fnErr } = await supabase.functions.invoke('verify', {
         body: {
           phone: phone.trim(),
           registration_number: regNo,
-          captcha_token: captchaToken,
         },
       })
       if (fnErr) {
@@ -75,13 +62,11 @@ export default function Verify() {
             /* body wasn't JSON */
           }
         }
-        resetCaptcha()
         throw new Error(verifyErrorMessage(verifyErrorCode(detail)))
       }
 
       const found = (Array.isArray(data) ? data[0] : data) as VerifiedProfile | undefined
       if (!found) {
-        resetCaptcha()
         throw new Error('No matching record. Check your registration number and phone number.')
       }
       setProfile(found)
@@ -141,7 +126,6 @@ export default function Verify() {
     setProfile(null)
     setPhotoUrl(null)
     setError(null)
-    resetCaptcha()
   }
   // ---- Student profile (verification success) ----
   if (profile) {
@@ -307,26 +291,6 @@ export default function Verify() {
               autoComplete="tel"
               required
             />
-          </div>
-
-          <div className="form__row captcha-row">
-            <span className="form__label">Security Check</span>
-            {hcaptchaSitekey ? (
-              <HCaptcha
-                ref={captchaRef}
-                sitekey={hcaptchaSitekey}
-                onVerify={(token) => setCaptchaToken(token)}
-                onExpire={() => setCaptchaToken('')}
-                onError={() => {
-                  setCaptchaToken('')
-                  setError('The security check could not be loaded. Please refresh and try again.')
-                }}
-              />
-            ) : (
-              <p className="form__hint">
-                Security check unavailable. Please set <code>VITE_HCAPTCHA_SITEKEY</code> to verify.
-              </p>
-            )}
           </div>
 
           <button

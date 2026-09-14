@@ -1,6 +1,5 @@
-import { useRef, useState } from 'react'
+import { useState } from 'react'
 import { Link } from 'react-router-dom'
-import HCaptcha from '@hcaptcha/react-hcaptcha'
 import { CheckCircle2, ArrowLeft, Loader2 } from 'lucide-react'
 import { getSupabase } from '../lib/supabase'
 import {
@@ -19,19 +18,10 @@ export default function StoriesShare() {
   const [program, setProgram] = useState('')
   const [phone, setPhone] = useState('')
   const [experience, setExperience] = useState('')
-  const [captchaToken, setCaptchaToken] = useState('')
 
   const [status, setStatus] = useState<Status>('idle')
   const [error, setError] = useState<string | null>(null)
   const [submitted, setSubmitted] = useState(false)
-
-  const captchaRef = useRef<HCaptcha | null>(null)
-  const hcaptchaSitekey = import.meta.env.VITE_HCAPTCHA_SITEKEY ?? ''
-
-  function resetCaptcha() {
-    captchaRef.current?.resetCaptcha()
-    setCaptchaToken('')
-  }
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -43,20 +33,17 @@ export default function StoriesShare() {
     if (!isValidPhone(phone)) return setError('Please enter a valid phone number.')
     const expErr = experienceError(experience)
     if (expErr) return setError(expErr)
-    if (!captchaToken) return setError('Please complete the CAPTCHA to prove you are human.')
 
     setStatus('submitting')
     try {
       const supabase = getSupabase()
-      // Submission runs through the `share-story` Edge Function, which verifies
-      // the CAPTCHA token server-side before invoking the hardened RPC.
+      // Submission runs through the `share-story` Edge Function, which invokes the hardened RPC.
       const { error: fnErr } = await supabase.functions.invoke('share-story', {
         body: {
           full_name: name,
           program,
           phone: phone.trim(),
           experience: experience.trim(),
-          captcha_token: captchaToken,
         },
       })
       if (fnErr) {
@@ -69,7 +56,6 @@ export default function StoriesShare() {
             /* body wasn't JSON */
           }
         }
-        resetCaptcha()
         throw new Error(submitErrorMessage(submitErrorCode(detail)))
       }
       setSubmitted(true)
@@ -178,26 +164,6 @@ export default function StoriesShare() {
               value={experience} onChange={(e) => setExperience(e.target.value)}
               placeholder="What did you learn, build, or achieve? How did ARISE help your journey?"
             />
-          </div>
-
-          <div className="form__row captcha-row">
-            <span className="form__label">Security Check</span>
-            {hcaptchaSitekey ? (
-              <HCaptcha
-                ref={captchaRef}
-                sitekey={hcaptchaSitekey}
-                onVerify={(token) => setCaptchaToken(token)}
-                onExpire={() => setCaptchaToken('')}
-                onError={() => {
-                  setCaptchaToken('')
-                  setError('The security check could not be loaded. Please refresh and try again.')
-                }}
-              />
-            ) : (
-              <p className="form__hint">
-                Security check unavailable. Please set <code>VITE_HCAPTCHA_SITEKEY</code> to share a story.
-              </p>
-            )}
           </div>
 
           <button

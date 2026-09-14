@@ -20,7 +20,6 @@
     "@capacitor/share": "^8.0.1",
     "@capacitor/splash-screen": "^8.0.2",
     "@capacitor/status-bar": "^8.0.3",
-    "@hcaptcha/react-hcaptcha": "^2.1.0",
     "@supabase/supabase-js": "^2.112.2",
     "lucide-react": "^0.454.0",
     "react": "^18.3.1",

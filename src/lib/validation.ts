@@ -79,10 +79,6 @@ export function registerErrorMessage(code: string): string {
       return 'Please complete all required fields. Only email is optional.'
     case 'RATE_LIMITED':
       return 'Too many attempts. Please try again later.'
-    case 'CAPTCHA_REQUIRED':
-      return 'Please complete the CAPTCHA to continue.'
-    case 'CAPTCHA_FAILED':
-      return 'Verification failed. Please try the CAPTCHA again.'
     default:
       return 'Something went wrong. Please try again.'
   }
@@ -101,8 +97,6 @@ export function registerErrorCode(message: string | undefined): string {
     'INVALID_RELIGION',
     'MISSING_FIELD',
     'RATE_LIMITED',
-    'CAPTCHA_REQUIRED',
-    'CAPTCHA_FAILED',
   ]
   return known.find((code) => message.includes(code)) ?? ''
 }
@@ -132,10 +126,6 @@ export function submitErrorMessage(code: string): string {
       return 'Please share a bit more about your experience.'
     case 'RATE_LIMITED':
       return 'Too many submissions from this number. Please try again later.'
-    case 'CAPTCHA_REQUIRED':
-      return 'Please complete the CAPTCHA to continue.'
-    case 'CAPTCHA_FAILED':
-      return 'Verification failed. Please try the CAPTCHA again.'
     default:
       return 'Something went wrong. Please try again.'
   }
@@ -149,8 +139,6 @@ export function submitErrorCode(message: string | undefined): string {
     'INVALID_PHONE',
     'INVALID_EXPERIENCE',
     'RATE_LIMITED',
-    'CAPTCHA_REQUIRED',
-    'CAPTCHA_FAILED',
   ]
   return known.find((code) => message.includes(code)) ?? ''
 }
@@ -164,10 +152,6 @@ export function verifyErrorMessage(code: string): string {
       return 'No matching record. Check your registration number and phone number.'
     case 'RATE_LIMITED':
       return 'Too many attempts. Please wait a few minutes.'
-    case 'CAPTCHA_REQUIRED':
-      return 'Please complete the CAPTCHA to continue.'
-    case 'CAPTCHA_FAILED':
-      return 'Verification failed. Please try the CAPTCHA again.'
     default:
       return 'Lookup failed. Please try again.'
   }
@@ -175,6 +159,6 @@ export function verifyErrorMessage(code: string): string {
 
 export function verifyErrorCode(message: string | undefined): string {
   if (!message) return ''
-  const known = ['NOT_FOUND', 'RATE_LIMITED', 'CAPTCHA_REQUIRED', 'CAPTCHA_FAILED']
+  const known = ['NOT_FOUND', 'RATE_LIMITED']
   return known.find((code) => message.includes(code)) ?? ''
 }

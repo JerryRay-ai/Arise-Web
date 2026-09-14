@@ -1986,14 +1986,6 @@ h4 {
   flex-wrap: wrap;
   gap: 12px;
 }
-.captcha-row {
-  flex-direction: column;
-  align-items: flex-start;
-  gap: 8px;
-}
-.captcha-row iframe {
-  max-width: 100%;
-}
 .attachbtn {
   display: inline-flex;
   align-items: center;

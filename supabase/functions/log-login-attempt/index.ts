@@ -20,22 +20,10 @@ const FAIL_WINDOW_MINUTES = 5
 const FAIL_THRESHOLD = 5
 const ALERT_COOLDOWN_MINUTES = 60
 
-// Production defaults are ONLY the origins the shipped Android app needs.
-// Add http://localhost dev origins via ALLOWED_ORIGINS while developing.
-const DEFAULT_ORIGINS = ['https://localhost', 'capacitor://localhost']
-
-function allowedOrigins(): string[] {
-  const raw = Deno.env.get('ALLOWED_ORIGINS') ?? ''
-  const extra = raw.split(',').map((s) => s.trim()).filter(Boolean)
-  return [...new Set([...DEFAULT_ORIGINS, ...extra])]
-}
-
 function cors(req: Request): Headers {
-  const origins = allowedOrigins()
-  const origin = req.headers.get('origin') ?? ''
-  const allow = origins.includes(origin) || origins.includes('*') ? origin : 'null'
+  const origin = req.headers.get('origin') ?? '*'
   return new Headers({
-    'Access-Control-Allow-Origin': allow,
+    'Access-Control-Allow-Origin': origin,
     'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
     'Access-Control-Allow-Methods': 'POST, OPTIONS',
     'Vary': 'Origin',
