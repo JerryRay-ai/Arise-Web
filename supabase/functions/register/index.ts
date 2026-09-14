@@ -79,6 +79,9 @@ Deno.serve(async (req) => {
       'INVALID_PASSPORT',
       'INVALID_OCCUPATION',
       'INVALID_RELIGION',
+      'MISSING_FIELD',
+      'INVALID_YEAR',
+      'REG_GEN_FAILED',
     ]
     const code = known.find((c) => msg.includes(c))
     return json(

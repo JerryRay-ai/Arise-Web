@@ -308,7 +308,7 @@ begin
     nullif(btrim(p_marital_status), ''), nullif(btrim(p_next_of_kin_name), ''),
     nullif(btrim(p_next_of_kin_phone), ''), nullif(btrim(p_gender), ''),
     nullif(btrim(p_course), ''), nullif(btrim(p_class_schedule), ''),
-    nullif(btrim(p_address), '')
+    nullif(btrim(p_address), ''), 'online'
   );
 
   return query select v_reg;
