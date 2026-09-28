@@ -82,6 +82,7 @@ function passportPath(url: string): string {
 type StatusFilter = 'all' | 'issued' | 'awaiting'
 type SourceFilter = 'all' | 'online' | 'paper_import'
 type StoryFilter = 'all' | 'pending' | 'approved' | 'rejected'
+type CourseFilter = 'all' | typeof COURSES[number]
 type Flash = { kind: 'ok' | 'err'; text: string }
 
 const COLUMNS =
@@ -819,6 +820,13 @@ const STORY_FILTERS: { key: StoryFilter; label: string }[] = [
   { key: 'all', label: 'All' },
 ]
 
+// Course filter on the Students view: lets admins narrow the roster to
+// a specific programme without touching the search bar.
+const COURSE_FILTERS: { key: CourseFilter; label: string }[] = [
+  { key: 'all', label: 'All courses' },
+  ...COURSES.map((c) => ({ key: c as CourseFilter, label: c })),
+]
+
 function AdminApp({
   session,
   isFullAdmin,
@@ -835,6 +843,7 @@ function AdminApp({
   const [query, setQuery] = useState('')
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all')
   const [sourceFilter, setSourceFilter] = useState<SourceFilter>('all')
+  const [courseFilter, setCourseFilter] = useState<CourseFilter>('all')
   const [filtersOpen, setFiltersOpen] = useState(false)
   const filtersRef = useRef<HTMLDivElement | null>(null)
   const [page, setPage] = useState(1)
@@ -896,7 +905,7 @@ function AdminApp({
   }, [flash])
 
   const activeFilterCount =
-    (statusFilter !== 'all' ? 1 : 0) + (sourceFilter !== 'all' ? 1 : 0)
+    (statusFilter !== 'all' ? 1 : 0) + (sourceFilter !== 'all' ? 1 : 0) + (courseFilter !== 'all' ? 1 : 0)
 
   // Close the filter popover on outside click or Escape.
   useEffect(() => {
@@ -1311,8 +1320,11 @@ function AdminApp({
     if (view === 'students' && sourceFilter !== 'all') {
       out = out.filter((r) => (r.source ?? 'online') === sourceFilter)
     }
+    if (view === 'students' && courseFilter !== 'all') {
+      out = out.filter((r) => r.course === courseFilter)
+    }
     return out
-  }, [rows, view, statusFilter, sourceFilter])
+  }, [rows, view, statusFilter, sourceFilter, courseFilter])
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase()
@@ -1330,7 +1342,7 @@ function AdminApp({
   // Reset to page 1 whenever the result set changes underneath us.
   useEffect(() => {
     setPage(1)
-  }, [query, view, statusFilter, sourceFilter])
+  }, [query, view, statusFilter, sourceFilter, courseFilter])
 
   useEffect(() => {
     if (page > pageCount) setPage(pageCount)
@@ -1746,20 +1758,32 @@ function AdminApp({
                         </button>
                       </span>
                     )}
-                    {sourceFilter !== 'all' && (
-                      <span className="admin__filters-tag">
-                        {SOURCE_FILTERS.find((f) => f.key === sourceFilter)?.label}
-                        <button
-                          type="button"
-                          aria-label="Clear source filter"
-                          onClick={() => setSourceFilter('all')}
-                        >
-                          <X size={11} />
-                        </button>
-                      </span>
-                    )}
-                  </span>
-                )}
+{sourceFilter !== 'all' && (
+                        <span className="admin__filters-tag">
+                          {SOURCE_FILTERS.find((f) => f.key === sourceFilter)?.label}
+                          <button
+                            type="button"
+                            aria-label="Clear source filter"
+                            onClick={() => setSourceFilter('all')}
+                          >
+                            <X size={11} />
+                          </button>
+                        </span>
+                      )}
+                      {courseFilter !== 'all' && (
+                        <span className="admin__filters-tag">
+                          {courseFilter}
+                          <button
+                            type="button"
+                            aria-label="Clear course filter"
+                            onClick={() => setCourseFilter('all')}
+                          >
+                            <X size={11} />
+                          </button>
+                        </span>
+                      )}
+                    </span>
+                  )}
 
                 {filtersOpen && (
                   <div className="admin__filterpop" role="dialog" aria-label="Student filters">
@@ -1781,36 +1805,55 @@ function AdminApp({
                       </div>
                     </div>
 
-                    <div className="admin__filtergroup">
-                      <span className="admin__filtergroup-label">Registration source</span>
-                      <div className="admin__chips" role="tablist">
-                        {SOURCE_FILTERS.map((f) => (
-                          <button
-                            key={f.key}
-                            type="button"
-                            role="tab"
-                            aria-selected={sourceFilter === f.key}
-                            className={`admin__chip${sourceFilter === f.key ? ' is-active' : ''}`}
-                            onClick={() => setSourceFilter(f.key)}
-                          >
-                            {f.label}
-                          </button>
-                        ))}
-                      </div>
-                    </div>
+<div className="admin__filtergroup">
+                       <span className="admin__filtergroup-label">Registration source</span>
+                       <div className="admin__chips" role="tablist">
+                         {SOURCE_FILTERS.map((f) => (
+                           <button
+                             key={f.key}
+                             type="button"
+                             role="tab"
+                             aria-selected={sourceFilter === f.key}
+                             className={`admin__chip${sourceFilter === f.key ? ' is-active' : ''}`}
+                             onClick={() => setSourceFilter(f.key)}
+                           >
+                             {f.label}
+                           </button>
+                         ))}
+                       </div>
+                     </div>
 
-                    {activeFilterCount > 0 && (
-                      <button
-                        type="button"
-                        className="admin__filterclear"
-                        onClick={() => {
-                          setStatusFilter('all')
-                          setSourceFilter('all')
-                        }}
-                      >
-                        Clear all filters
-                      </button>
-                    )}
+                     <div className="admin__filtergroup">
+                       <span className="admin__filtergroup-label">Course</span>
+                       <div className="admin__chips" role="tablist">
+                         {COURSE_FILTERS.map((f) => (
+                           <button
+                             key={f.key}
+                             type="button"
+                             role="tab"
+                             aria-selected={courseFilter === f.key}
+                             className={`admin__chip${courseFilter === f.key ? ' is-active' : ''}`}
+                             onClick={() => setCourseFilter(f.key)}
+                           >
+                             {f.label}
+                           </button>
+                         ))}
+                       </div>
+                     </div>
+
+                     {activeFilterCount > 0 && (
+                       <button
+                         type="button"
+                         className="admin__filterclear"
+                         onClick={() => {
+                           setStatusFilter('all')
+                           setSourceFilter('all')
+                           setCourseFilter('all')
+                         }}
+                       >
+                         Clear all filters
+                       </button>
+                     )}
                   </div>
                 )}
               </div>
@@ -4395,10 +4438,11 @@ function validateImportRow(values: Record<string, string>): { error: string | nu
   for (const k of ['state_of_origin', 'lga', 'occupation', 'last_institution', 'next_of_kin_name', 'next_of_kin_phone', 'address']) {
     if (!get(k)) return { error: `${k} is required.` }
   }
-  const dob = get('date_of_birth')
-  if (!dob) return { error: 'Date of birth is required.' }
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(dob) || Number.isNaN(new Date(dob).getTime()))
-    return { error: 'Date of birth must be YYYY-MM-DD.' }
+  const dobRaw = get('date_of_birth')
+  if (!dobRaw) return { error: 'Date of birth is required.' }
+  if (!/^\d{2}\/\d{2}\/\d{4}$/.test(dobRaw) || Number.isNaN(new Date(dobRaw).getTime()))
+    return { error: 'Date of birth must be DD/MM/YYYY.' }
+  const dob = `${dobRaw.slice(6, 10)}-${dobRaw.slice(3, 5)}-${dobRaw.slice(0, 2)}`
 
   const course = matchOption(COURSES, get('course'))
   if (!course) return { error: `Course must be one of: ${COURSES.map((c) => c.trim()).join(', ')}.` }
