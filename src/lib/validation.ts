@@ -33,9 +33,10 @@ export function isValidName(name: string): boolean {
   return name.trim().length >= 2
 }
 
-// Accept +, spaces, dashes and parentheses, but require at least 7 digits.
+// Accept exactly 11 digits starting with 0, e.g. 08123456789
 export function isValidPhone(phone: string): boolean {
-  return phone.replace(/\D/g, '').length >= 7
+  const digits = phone.replace(/\D/g, '')
+  return digits.length === 11 && digits.startsWith('0')
 }
 
 export function passportError(file: File): string | null {
@@ -63,6 +64,8 @@ export function registerErrorMessage(code: string): string {
   switch (code) {
     case 'EMAIL_EXISTS':
       return 'A candidate is already registered with this email.'
+    case 'PHONE_EXISTS':
+      return 'A candidate is already registered with this phone number.'
     case 'INVALID_NAME':
       return 'Please enter your full name.'
     case 'INVALID_EMAIL':

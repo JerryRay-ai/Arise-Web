@@ -365,7 +365,12 @@ export default function Register() {
             <label className="form__label" htmlFor="phone">Phone Number</label>
             <input
               id="phone" className="form__control" type="tel"
-              value={phone} onChange={(e) => setPhone(e.target.value)}
+              value={phone} onChange={(e) => {
+                let val = e.target.value.replace(/\D/g, '') // keep only digits
+                if (!val.startsWith('0')) val = '0' + val // ensure starts with 0
+                if (val.length > 11) val = val.slice(0, 11) // limit to 11 digits
+                setPhone(val)
+              }}
               autoComplete="tel" required
             />
           </div>

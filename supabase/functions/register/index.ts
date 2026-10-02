@@ -76,6 +76,7 @@ Deno.serve(async (req) => {
       'INVALID_NAME',
       'INVALID_EMAIL',
       'INVALID_PHONE',
+      'PHONE_EXISTS',
       'INVALID_PASSPORT',
       'INVALID_OCCUPATION',
       'INVALID_RELIGION',

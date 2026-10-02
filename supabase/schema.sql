@@ -292,6 +292,16 @@ begin
     raise exception 'EMAIL_EXISTS';
   end if;
 
+  -- Phone number uniqueness: compare on digits only (formatting differences
+  -- such as spaces, dashes, +234 vs 0 are normalized away).
+  -- This check is placed here in register_candidate so that duplicate phone
+  -- numbers are rejected at registration time, just like duplicate emails.
+  if v_phone is not null
+     and exists (select 1 from public.candidates where regexp_replace(phone, '\D', '', 'g')
+            = regexp_replace(v_phone, '\D', '', 'g')) then
+    raise exception 'PHONE_EXISTS';
+  end if;
+
   v_reg := public.next_registration_number(v_year);
 
   insert into public.candidates (
