@@ -1367,6 +1367,8 @@ function AdminApp({
   const [exportScope, setExportScope] = useState<ExportScope>('current')
   const [exportFrom, setExportFrom] = useState('')
   const [exportTo, setExportTo] = useState('')
+  const [exportCourseFilter, setExportCourseFilter] = useState('all')
+  const [exportClassScheduleFilter, setExportClassScheduleFilter] = useState('all')
   const exportRef = useRef<HTMLDivElement | null>(null)
 
   // Close the export popover on outside click or Escape.
@@ -1405,8 +1407,14 @@ function AdminApp({
       const to = new Date(`${exportTo}T23:59:59.999`).getTime()
       out = out.filter((r) => r.created_at && toTime(r.created_at) <= to)
     }
+    if (exportCourseFilter !== 'all') {
+      out = out.filter((r) => r.course === exportCourseFilter)
+    }
+    if (exportClassScheduleFilter !== 'all') {
+      out = out.filter((r) => r.class_schedule === exportClassScheduleFilter)
+    }
     return out
-  }, [rows, filtered, exportScope, exportFrom, exportTo])
+  }, [rows, filtered, exportScope, exportFrom, exportTo, exportCourseFilter, exportClassScheduleFilter])
 
   const exportSuffix =
     exportScope === 'all'
@@ -1415,7 +1423,7 @@ function AdminApp({
         ? '-online'
         : exportScope === 'paper_import'
           ? '-paper-import'
-          : '-filtered'
+          : `-filtered${exportFrom || exportTo ? `_${exportFrom}_to_${exportTo}` : ''}${exportCourseFilter !== 'all' ? `-course_${exportCourseFilter}` : ''}${exportClassScheduleFilter !== 'all' ? `-schedule_${exportClassScheduleFilter}` : ''}`
 
   const exportCsv = useCallback(() => {
     if (exportRows.length === 0) return
@@ -1702,6 +1710,39 @@ function AdminApp({
                               Clear date range
                             </button>
                           )}
+                          <div className="admin__filtergroup">
+                            <span className="admin__filtergroup-label">Course</span>
+                            <div className="admin__chips">
+                              {['all', ...COURSES.map((c) => c.trim())].map((c) => (
+                                <button
+                                  key={c}
+                                  type="button"
+                                  aria-pressed={exportCourseFilter === c}
+                                  className={`admin__chip${exportCourseFilter === c ? ' is-active' : ''}`}
+                                  onClick={() => setExportCourseFilter(c)}
+                                >
+                                  {c}
+                                </button>
+                              ))}
+                            </div>
+                          </div>
+                          <div className="admin__filtergroup">
+                            <span className="admin__filtergroup-label">Class schedule</span>
+                            <div className="admin__chips">
+                              {['all', ...CLASS_SCHEDULES].map((s) => (
+                                <button
+                                  key={s}
+                                  type="button"
+                                  aria-pressed={exportClassScheduleFilter === s}
+                                  className={`admin__chip${exportClassScheduleFilter === s ? ' is-active' : ''}`}
+                                  onClick={() => setExportClassScheduleFilter(s)}
+                                >
+                                  {s}
+                                </button>
+                              ))}
+                            </div>
+                          </div>
+
                         </div>
 
                         <button
