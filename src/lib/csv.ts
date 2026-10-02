@@ -19,6 +19,7 @@ export type StudentCsvRow = {
   maritalStatus: string
   registeredOn: string
   source: string
+  classSchedule: string
 }
 
 // Builds the student export. `rows` should be the currently-visible (filtered)
@@ -36,6 +37,7 @@ export function buildStudentsCsv(rows: Candidate[]): string {
     'Marital Status',
     'Registered On',
     'Source',
+    'Class Schedule',
   ]
   const lines: string[] = [header.map(csvField).join(',')]
   for (const r of rows) {
@@ -51,6 +53,7 @@ export function buildStudentsCsv(rows: Candidate[]): string {
       maritalStatus: r.marital_status ?? '',
       registeredOn: r.created_at ? new Date(r.created_at).toLocaleDateString() : '',
       source: r.source === 'paper_import' ? 'Paper import' : 'Online',
+      classSchedule: r.class_schedule ?? '',
     }
     lines.push(Object.values(row).map(csvField).join(','))
   }
