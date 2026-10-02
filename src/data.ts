@@ -169,7 +169,7 @@ export interface Sponsor {
 export const SPONSORS: Sponsor[] = [
   {
     image: '/assets/sponsor-umo.jpg',
-    name: 'His Excellency Pastor Umo Eno',
+    name: 'Pastor Bassey Umo Eno',
     role: 'Executive Governor of Akwa Ibom State',
   },
   {

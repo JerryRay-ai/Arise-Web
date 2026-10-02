@@ -4,8 +4,7 @@ export default function Sponsors() {
   return (
     <section className="sponsors">
       <div className="container">
-        <p className="sponsors__eyebrow">Our Patrons</p>
-        <h2 className="sponsors__heading">Arise Sponsors</h2>
+                <h2 className="sponsors__heading">Our Patrons</h2>
         <div className="sponsors__grid">
           {SPONSORS.map(({ image, name, role }) => (
             <div className="sponsor" key={name}>

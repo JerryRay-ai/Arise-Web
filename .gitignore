@@ -32,3 +32,11 @@ backups/
 *.log
 # Documents
 *.pdf
+
+# Documentation conversion artifacts
+IT_Documentation.docx
+Arise_IT_Project_Documentation.docx
+
+# Python conversion scripts
+*.pyc
+__pycache__/

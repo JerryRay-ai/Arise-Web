@@ -4438,11 +4438,10 @@ function validateImportRow(values: Record<string, string>): { error: string | nu
   for (const k of ['state_of_origin', 'lga', 'occupation', 'last_institution', 'next_of_kin_name', 'next_of_kin_phone', 'address']) {
     if (!get(k)) return { error: `${k} is required.` }
   }
-  const dobRaw = get('date_of_birth')
-  if (!dobRaw) return { error: 'Date of birth is required.' }
-  if (!/^\d{2}\/\d{2}\/\d{4}$/.test(dobRaw) || Number.isNaN(new Date(dobRaw).getTime()))
-    return { error: 'Date of birth must be DD/MM/YYYY.' }
-  const dob = `${dobRaw.slice(6, 10)}-${dobRaw.slice(3, 5)}-${dobRaw.slice(0, 2)}`
+  const dob = get('date_of_birth')
+  if (!dob) return { error: 'Date of birth is required.' }
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(dob) || Number.isNaN(new Date(dob).getTime()))
+    return { error: 'Date of birth must be YYYY-MM-DD.' }
 
   const course = matchOption(COURSES, get('course'))
   if (!course) return { error: `Course must be one of: ${COURSES.map((c) => c.trim()).join(', ')}.` }
